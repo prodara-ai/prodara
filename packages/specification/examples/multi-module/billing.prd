@@ -1,0 +1,130 @@
+/*
+  Billing module — demonstrates:
+  - cross-module actor imports
+  - state machine transitions
+  - selective authorization (only admin can void)
+  - governance: security + privacy
+  - spec-level testing with authorization assertions
+*/
+
+module billing {
+
+  // Import actors from the identity module — no need to redefine them.
+  import admin from identity
+  import accountant from identity
+
+  // --- Capability ---
+
+  capability invoicing {
+    title: "Invoicing"
+    actors: [accountant, admin]
+  }
+
+  // --- Domain model ---
+
+  // Invoice lifecycle: draft → issued → void.
+  enum invoice_status {
+    draft
+    issued
+    void
+  }
+
+  enum invoice_error {
+    not_issued
+    void_failed
+  }
+
+  entity invoice {
+    invoice_id: uuid
+    status: invoice_status = draft
+  }
+
+  // --- Event ---
+
+  // Declared event with a typed payload.
+  // Other products can consume this via product_ref.
+  event invoice_issued {
+    payload: invoice
+  }
+
+  // --- Workflow ---
+
+  // Only admin can void an invoice (accountant is deliberately excluded).
+  // The transitions block declares a state machine change;
+  // the compiler validates that both members exist in invoice_status.
+  workflow void_invoice {
+    capability: invoicing
+
+    authorization {
+      admin: [invoice.void]    // only admin gets this permission
+    }
+
+    writes {
+      invoice
+    }
+
+    transitions {
+      invoice.status: issued -> void
+    }
+
+    effects {
+      audit "Invoice voided"
+    }
+
+    returns {
+      ok: invoice
+      error: invoice_error
+    }
+  }
+
+  action void_invoice {
+    title: "Void Invoice"
+    workflow: void_invoice
+  }
+
+  // --- Surface ---
+
+  strings invoice_strings {
+    invoice_list_title: "Invoices"
+  }
+
+  surface invoice_list {
+    kind: view
+    title: billing.invoice_strings.invoice_list_title
+    binds: invoice
+    actions: [void_invoice]
+  }
+
+  // --- Governance ---
+
+  // Security: both the surface and the workflow require authentication,
+  // authorization, and audit logging.
+  security billing_surface_security {
+    applies_to: [invoice_list, void_invoice]
+    requires: [authentication, authorization, audit_logging]
+  }
+
+  // Privacy: invoice data is classified as business-sensitive
+  // and must be retained for 7 years.
+  privacy invoice_privacy {
+    applies_to: [invoice]
+    classification: business_sensitive
+    retention: "7 years"
+  }
+
+  // --- Spec-level test ---
+
+  // This test validates authorization semantics against the Product Graph.
+  // No generated code is executed — assertions run against the spec itself.
+  test only_admin_can_void_invoice {
+    target: void_invoice
+
+    expect {
+      authorization {
+        admin: allowed
+        accountant: denied     // accountant is NOT authorized to void
+      }
+    }
+  }
+
+}

@@ -1,0 +1,81 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Prodara",
+  "scopeName": "source.prd",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#booleans" },
+    { "include": "#block-keywords" },
+    { "include": "#clause-keywords" },
+    { "include": "#operator-keywords" },
+    { "include": "#step-keywords" },
+    { "include": "#type-primitives" },
+    { "include": "#type-generics" },
+    { "include": "#arrow" },
+    { "include": "#dot-path" },
+    { "include": "#identifiers" }
+  ],
+  "repository": {
+    "comments": {
+      "name": "comment.line.double-slash.prd",
+      "match": "//.*$"
+    },
+    "strings": {
+      "name": "string.quoted.double.prd",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.prd",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "numbers": {
+      "name": "constant.numeric.prd",
+      "match": "\\b\\d+(\\.\\d+)?\\b"
+    },
+    "booleans": {
+      "name": "constant.language.boolean.prd",
+      "match": "\\b(true|false)\\b"
+    },
+    "block-keywords": {
+      "name": "keyword.declaration.prd",
+      "match": "\\b(product|module|entity|enum|value|actor|capability|workflow|action|event|schedule|surface|rule|storage|integration|execution|extension|contract|rendering|tokens|theme|strings|constitution|policies|security|privacy|deployment|test|secret|environment|environments|secrets|integrations)\\b"
+    },
+    "clause-keywords": {
+      "name": "keyword.control.prd",
+      "match": "\\b(import|from|as|product_ref|publishes|consumes|authorization|input|reads|writes|rules|steps|transitions|effects|returns|on|payload|cron|binds|actions|hooks|fields|serialization|title|description|version|modules|kind|target|platform|layout|grid|placement|style|bind|components|at|columns|rows|gap|row|column|auto|extends|use|applies_to|requires|classification|retention|redact_on|exportable|erasable|validation|protocol|auth|transport|model|table|indexes|mode|body|language|unique|source|env|path|scope|url|actors|message|condition|given|expect)\\b"
+    },
+    "operator-keywords": {
+      "name": "keyword.operator.prd",
+      "match": "\\b(and|or|not)\\b"
+    },
+    "step-keywords": {
+      "name": "keyword.control.flow.prd",
+      "match": "\\b(call|decide|when|fail|emit|audit|notify)\\b"
+    },
+    "type-primitives": {
+      "name": "support.type.primitive.prd",
+      "match": "\\b(string|integer|decimal|boolean|uuid|date|datetime)\\b"
+    },
+    "type-generics": {
+      "name": "support.type.generic.prd",
+      "match": "\\b(optional|list|map)\\b"
+    },
+    "arrow": {
+      "name": "keyword.operator.arrow.prd",
+      "match": "->"
+    },
+    "dot-path": {
+      "name": "variable.other.member.prd",
+      "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\.[a-zA-Z_][a-zA-Z0-9_.]*\\b"
+    },
+    "identifiers": {
+      "name": "variable.other.prd",
+      "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+    }
+  }
+}

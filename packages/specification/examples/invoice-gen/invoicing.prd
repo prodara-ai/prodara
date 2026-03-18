@@ -1,0 +1,229 @@
+/*
+  Invoicing module — domain model, workflow, and extensions.
+  Demonstrates the extension construct:
+    - extension with target, kind, and contract block
+    - custom_logic extension (invoice numbering)
+    - custom_rendering extension (PDF generation)
+    - how extensions attach to a workflow
+    - contract blocks with input/output types
+*/
+
+module invoicing {
+
+  // --- Actors ---
+
+  actor accountant {
+    title: "Accountant"
+    description: "Creates and sends invoices"
+  }
+
+  // --- Capability ---
+
+  capability billing {
+    title: "Billing"
+    actors: [accountant]
+  }
+
+  // --- Domain model ---
+
+  enum invoice_status {
+    draft
+    sent
+    paid
+    overdue
+  }
+
+  // A value object for line items — immutable once created.
+  value line_item {
+    description: string
+    quantity: integer
+    unit_price: decimal
+  }
+
+  entity invoice {
+    invoice_id: uuid
+    number: string                        // assigned by the numbering extension
+    status: invoice_status = draft
+    customer_name: string
+    items: list<line_item>
+    issued_at: optional<datetime>
+  }
+
+  // --- Rules ---
+
+  rule invoice_must_have_items {
+    entity: invoice
+    condition: items != []
+    message: invoicing.invoice_strings.items_required
+  }
+
+  // --- Workflow ---
+
+  /*
+    Creates a new invoice, assigns a number via the
+    invoice_numbering extension, and generates a PDF
+    via the pdf_renderer extension.
+  */
+  workflow create_invoice {
+    capability: billing
+
+    authorization {
+      accountant: [invoice.create]
+    }
+
+    input {
+      customer_name: string
+      items: list<line_item>
+    }
+
+    writes {
+      invoice
+    }
+
+    steps {
+      call validate_items            // ensure at least one line item
+      call assign_number             // delegates to the extension seam
+      call render_pdf                // delegates to the rendering extension
+    }
+
+    effects {
+      audit "Invoice created"
+    }
+
+    returns {
+      ok: invoice
+      error: string
+    }
+  }
+
+  // --- Actions ---
+
+  action create_invoice {
+    title: "Create Invoice"
+    workflow: create_invoice
+  }
+
+  // --- Strings ---
+
+  strings invoice_strings {
+    page_title: "Invoices"
+    items_required: "An invoice must have at least one line item"
+  }
+
+  // --- Surface ---
+
+  surface invoice_list {
+    kind: view
+    title: "Invoices"                     // direct string (no symbol_ref needed)
+    binds: invoice
+    actions: [create_invoice]
+  }
+
+  // =========================================================
+  //  Extensions — the star of this example
+  // =========================================================
+
+  /*
+    Extension: invoice_numbering
+    ----------------------------
+    Attaches to the create_invoice workflow and provides a
+    stable seam where handwritten numbering logic lives.
+
+    The contract tells the compiler (and generators) that
+    this seam receives an invoice and returns a string
+    (the formatted invoice number).
+
+    The body contains the actual implementation in the
+    target language.  During generation the compiler emits
+    the body between seam markers:
+
+      // --- PRODARA SEAM START: invoice_numbering ---
+      //   <body content here>
+      // --- PRODARA SEAM END: invoice_numbering ---
+  */
+  extension invoice_numbering {
+    target: create_invoice                // the workflow this attaches to
+    kind: custom_logic                    // classifies the extension
+    language: "typescript"                // target language for the body
+    description: "Generates a sequential invoice number"
+
+    contract {
+      input: invoice                      // receives the draft invoice
+      output: string                      // returns the formatted number
+    }
+
+    // The inline implementation — written in the target language.
+    // "input" is bound to the contract input type (invoice).
+    body """
+      const year = input.issued_at
+        ? input.issued_at.getFullYear()
+        : new Date().getFullYear();
+      const seq = await db.nextSequence("invoice_number");
+      return `INV-${year}-${seq.toString().padStart(5, "0")}`;
+    """
+  }
+
+  /*
+    Extension: pdf_renderer
+    -----------------------
+    A second extension on the same workflow, this time for
+    rendering the invoice to PDF.  The kind is
+    custom_rendering, which tells generators the seam
+    produces a visual artifact rather than pure data.
+
+    When the body is present, the compiler emits its
+    content into the seam markers during generation.
+  */
+  extension pdf_renderer {
+    target: create_invoice
+    kind: custom_rendering
+    language: "typescript"
+    description: "Renders the finalised invoice as a PDF"
+
+    contract {
+      input: invoice                      // receives the numbered invoice
+      output: string                      // returns a URL or file path
+    }
+
+    body """
+      const doc = new PDFDocument();
+      doc.fontSize(20).text(`Invoice ${input.number}`);
+      doc.moveDown();
+      for (const item of input.items) {
+        const line = `${item.description}  ${item.quantity} x ${item.unit_price}`;
+        doc.fontSize(12).text(line);
+      }
+      const path = `/invoices/${input.number}.pdf`;
+      await doc.save(path);
+      return path;
+    """
+  }
+
+  // --- Tests ---
+
+  // Verify the workflow declares the expected authorization.
+  test accountant_can_create {
+    target: create_invoice
+    description: "Accountants are authorized to create invoices"
+
+    expect {
+      authorization {
+        accountant: allowed
+      }
+    }
+  }
+
+  // Verify the items-required rule rejects empty lists.
+  test items_required {
+    target: invoice_must_have_items
+    description: "An invoice with no items is invalid"
+
+    given {
+      invoice.items: []
+    }
+
+    expect {
+      invalid_when: "items != []"
+    }
+  }
+}

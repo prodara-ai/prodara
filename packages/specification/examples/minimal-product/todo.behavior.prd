@@ -1,0 +1,40 @@
+// Actors, capabilities, workflows, and actions for the todo module.
+// This file defines WHO uses the product and WHAT they can do.
+
+module todo {
+
+  // The only actor — the person using the app.
+  actor user {
+    title: "User"
+  }
+
+  // Capabilities group related behavior under a business label.
+  capability task_management {
+    title: "Task Management"
+  }
+
+  // Workflow: the main unit of product behavior.
+  // Defines what happens when a user creates a task.
+  workflow create_task {
+    capability: task_management
+
+    authorization {
+      user: [task.create]      // "user" actor needs "task.create" permission
+    }
+
+    writes {
+      task                     // this workflow creates task records
+    }
+
+    returns {
+      ok: task                 // success → returns the new task
+      error: task_error        // failure → returns an error enum
+    }
+  }
+
+  // Actions expose workflows to surfaces (UI, API, etc.).
+  action create_task {
+    workflow: create_task
+  }
+
+}

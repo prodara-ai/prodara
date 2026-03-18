@@ -1,0 +1,32 @@
+{
+  "name": "@prodara/specification",
+  "version": "0.1.0",
+  "description": "The Prodara language specification — grammar, type system, product graph format, and runtime contracts",
+  "author": "Prodara Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prodara-ai/prodara.git",
+    "directory": "packages/specification"
+  },
+  "homepage": "https://github.com/prodara-ai/prodara/tree/main/packages/specification#readme",
+  "bugs": {
+    "url": "https://github.com/prodara-ai/prodara/issues"
+  },
+  "type": "module",
+  "private": false,
+  "license": "MIT",
+  "files": [
+    "language",
+    "model",
+    "compiler",
+    "runtime",
+    "registry",
+    "testing",
+    "examples",
+    "README.md",
+    "STYLE.md"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

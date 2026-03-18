@@ -1,0 +1,65 @@
+/*
+  Platform module for the task board.
+  Demonstrates rendering with grid layout, placement,
+  responsive breakpoints, and a schedule.
+*/
+
+module platform {
+
+  // --- Rendering ---
+
+  // Rendering defines HOW a surface looks on a specific platform.
+  // Surfaces define WHAT; rendering defines WHERE and HOW.
+  rendering board_layout {
+    target: board.board_view       // which surface this applies to
+    platform: web
+
+    layout: grid
+
+    // A 4-column grid — one column per kanban state.
+    grid {
+      columns: [1, 1, 1, 1]       // equal-width columns
+      gap: 16
+    }
+
+    // Place child components into specific grid cells.
+    placement {
+      backlog_column: {
+        column: 1
+      }
+      in_progress_column: {
+        column: 2
+      }
+      review_column: {
+        column: 3
+      }
+      done_column: {
+        column: 4
+      }
+    }
+
+    // Design token references for styling.
+    style {
+      background: design.base.color.surface_background
+      padding: design.base.spacing.md
+    }
+
+    // Responsive override — stack columns on small screens.
+    at design.base.breakpoint.sm {
+      layout: grid
+
+      grid {
+        columns: [1]               // single column on mobile
+      }
+    }
+  }
+
+  // --- Schedule ---
+
+  // Run a daily cleanup at midnight.
+  schedule daily_archive {
+    cron: "0 0 * * *"
+    description: "Archive completed tasks older than 30 days"
+  }
+
+}

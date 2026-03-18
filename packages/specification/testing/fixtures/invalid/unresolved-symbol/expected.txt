@@ -1,0 +1,2 @@
+Expected diagnostic category: resolution_error
+Expected message contains: missing_entity

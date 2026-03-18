@@ -1,0 +1,58 @@
+/*
+  Platform module for the contact form.
+  Demonstrates: transport, execution, serialization,
+  and rendering for a form surface.
+*/
+
+module platform {
+
+  // --- Serialization ---
+
+  // How data is formatted when sent over the wire.
+  serialization json_api {
+    format: json
+    naming: camel_case
+    dates: iso8601
+  }
+
+  // --- Transport ---
+
+  // Transport defines the communication protocol for a surface.
+  // This tells the compiler that the contact form is served over HTTP REST.
+  transport form_transport {
+    target: leads.contact_form
+    protocol: http
+    style: rest
+    description: "REST endpoint for the contact form"
+  }
+
+  // --- Execution ---
+
+  // Execution configures how a workflow runs.
+  execution lead_submission {
+    target: leads.submit_lead
+    mode: sync                     // synchronous — the user waits for a response
+    description: "Submit lead synchronously"
+  }
+
+  // --- Rendering ---
+
+  // Simple single-column form layout.
+  rendering form_layout {
+    target: leads.contact_form
+    platform: web
+
+    layout: grid
+
+    grid {
+      columns: [1]                 // single column form
+      gap: 16
+    }
+
+    style {
+      max_width: "480"
+      padding: "24"
+    }
+  }
+
+}

@@ -1,0 +1,813 @@
+{
+  "format": "prodara-product-graph",
+  "version": "0.1.0",
+  "product": {
+    "id": "product",
+    "kind": "product",
+    "name": "saas_billing",
+    "title": "SaaS Billing",
+    "version": "1.0.0",
+    "modules": [
+      "billing",
+      "identity",
+      "platform"
+    ],
+    "publishes": null
+  },
+  "modules": [
+    {
+      "id": "billing",
+      "kind": "module",
+      "name": "billing",
+      "imports": [
+        {
+          "symbol": "admin",
+          "from": "identity",
+          "alias": null
+        },
+        {
+          "symbol": "customer",
+          "from": "identity",
+          "alias": null
+        },
+        {
+          "symbol": "user",
+          "from": "identity",
+          "alias": null
+        }
+      ],
+      "actions": [
+        {
+          "id": "billing.action.do_create_invoice",
+          "kind": "action",
+          "name": "do_create_invoice",
+          "title": "Create Invoice",
+          "workflow": "billing.workflow.create_invoice"
+        },
+        {
+          "id": "billing.action.do_upgrade_subscription",
+          "kind": "action",
+          "name": "do_upgrade_subscription",
+          "title": "Upgrade Subscription",
+          "workflow": "billing.workflow.upgrade_subscription"
+        }
+      ],
+      "capabilities": [
+        {
+          "id": "billing.capability.invoicing",
+          "kind": "capability",
+          "name": "invoicing",
+          "title": "Invoice Management",
+          "description": null,
+          "actors": [
+            "identity.actor.admin"
+          ]
+        },
+        {
+          "id": "billing.capability.subscription_mgmt",
+          "kind": "capability",
+          "name": "subscription_mgmt",
+          "title": "Subscription Management",
+          "description": null,
+          "actors": [
+            "identity.actor.admin",
+            "identity.actor.customer"
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "id": "billing.entity.invoice",
+          "kind": "entity",
+          "name": "invoice",
+          "fields": [
+            {
+              "name": "invoice_id",
+              "type": "uuid"
+            },
+            {
+              "name": "owner",
+              "type": {
+                "ref": "identity.entity.user"
+              }
+            },
+            {
+              "name": "status",
+              "type": {
+                "ref": "billing.enum.invoice_status"
+              }
+            },
+            {
+              "name": "total",
+              "type": "decimal"
+            },
+            {
+              "name": "currency",
+              "type": "string"
+            },
+            {
+              "name": "issued_at",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "id": "billing.entity.subscription",
+          "kind": "entity",
+          "name": "subscription",
+          "fields": [
+            {
+              "name": "subscription_id",
+              "type": "uuid"
+            },
+            {
+              "name": "owner",
+              "type": {
+                "ref": "identity.entity.user"
+              }
+            },
+            {
+              "name": "plan",
+              "type": {
+                "ref": "billing.enum.plan_tier"
+              }
+            },
+            {
+              "name": "active",
+              "type": "boolean"
+            },
+            {
+              "name": "started_at",
+              "type": "datetime"
+            }
+          ]
+        }
+      ],
+      "enums": [
+        {
+          "id": "billing.enum.billing_error",
+          "kind": "enum",
+          "name": "billing_error",
+          "members": [
+            {
+              "name": "invalid_amount"
+            },
+            {
+              "name": "already_paid"
+            },
+            {
+              "name": "no_active_subscription"
+            }
+          ]
+        },
+        {
+          "id": "billing.enum.invoice_status",
+          "kind": "enum",
+          "name": "invoice_status",
+          "members": [
+            {
+              "name": "draft"
+            },
+            {
+              "name": "issued"
+            },
+            {
+              "name": "paid"
+            },
+            {
+              "name": "void"
+            }
+          ]
+        },
+        {
+          "id": "billing.enum.plan_tier",
+          "kind": "enum",
+          "name": "plan_tier",
+          "members": [
+            {
+              "name": "free"
+            },
+            {
+              "name": "starter"
+            },
+            {
+              "name": "pro"
+            },
+            {
+              "name": "enterprise"
+            }
+          ]
+        }
+      ],
+      "rules": [
+        {
+          "id": "billing.rule.invoice_total_positive",
+          "kind": "rule",
+          "name": "invoice_total_positive",
+          "entity": "billing.entity.invoice",
+          "condition": {
+            "op": ">",
+            "left": {
+              "access": [
+                "total"
+              ]
+            },
+            "right": {
+              "literal": 0,
+              "type": "integer"
+            }
+          },
+          "message": "billing.billing_strings.total_positive"
+        }
+      ],
+      "strings": [
+        {
+          "id": "billing.strings.billing_strings",
+          "kind": "strings",
+          "name": "billing_strings",
+          "entries": {
+            "total_positive": "Invoice total must be positive",
+            "invoice_created": "Invoice created successfully"
+          }
+        }
+      ],
+      "surfaces": [
+        {
+          "id": "billing.surface.billing_dashboard",
+          "kind": "surface",
+          "name": "billing_dashboard",
+          "surface_kind": "view",
+          "title": "Billing Dashboard",
+          "capability": null,
+          "binds": "billing.entity.invoice"
+        }
+      ],
+      "tests": [
+        {
+          "id": "billing.test.invoice_exists",
+          "kind": "test",
+          "name": "invoice_exists",
+          "target": "billing.entity.invoice",
+          "description": null
+        },
+        {
+          "id": "billing.test.subscription_exists",
+          "kind": "test",
+          "name": "subscription_exists",
+          "target": "billing.entity.subscription",
+          "description": null
+        }
+      ],
+      "workflows": [
+        {
+          "id": "billing.workflow.create_invoice",
+          "kind": "workflow",
+          "name": "create_invoice",
+          "capability": "billing.capability.invoicing",
+          "authorization": [
+            {
+              "actor": "identity.actor.admin",
+              "permissions": [
+                "invoice.create"
+              ]
+            }
+          ],
+          "reads": [
+            "identity.entity.user",
+            "billing.entity.subscription"
+          ],
+          "writes": [
+            "billing.entity.invoice"
+          ],
+          "rules": [
+            "billing.rule.invoice_total_positive"
+          ],
+          "returns": [
+            {
+              "name": "ok",
+              "type": {
+                "ref": "billing.entity.invoice"
+              }
+            },
+            {
+              "name": "error",
+              "type": {
+                "ref": "billing.enum.billing_error"
+              }
+            }
+          ]
+        },
+        {
+          "id": "billing.workflow.upgrade_subscription",
+          "kind": "workflow",
+          "name": "upgrade_subscription",
+          "capability": "billing.capability.subscription_mgmt",
+          "authorization": [
+            {
+              "actor": "identity.actor.customer",
+              "permissions": [
+                "subscription.update"
+              ]
+            },
+            {
+              "actor": "identity.actor.admin",
+              "permissions": [
+                "subscription.update"
+              ]
+            }
+          ],
+          "input": [
+            {
+              "name": "target_plan",
+              "type": {
+                "ref": "billing.enum.plan_tier"
+              }
+            }
+          ],
+          "reads": [
+            "billing.entity.subscription"
+          ],
+          "writes": [
+            "billing.entity.subscription"
+          ],
+          "returns": [
+            {
+              "name": "ok",
+              "type": {
+                "ref": "billing.entity.subscription"
+              }
+            },
+            {
+              "name": "error",
+              "type": {
+                "ref": "billing.enum.billing_error"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "identity",
+      "kind": "module",
+      "name": "identity",
+      "imports": [],
+      "actors": [
+        {
+          "id": "identity.actor.admin",
+          "kind": "actor",
+          "name": "admin",
+          "title": "Administrator",
+          "description": "System administrator"
+        },
+        {
+          "id": "identity.actor.customer",
+          "kind": "actor",
+          "name": "customer",
+          "title": "Customer",
+          "description": "Paying customer"
+        }
+      ],
+      "entities": [
+        {
+          "id": "identity.entity.user",
+          "kind": "entity",
+          "name": "user",
+          "fields": [
+            {
+              "name": "user_id",
+              "type": "uuid"
+            },
+            {
+              "name": "email",
+              "type": "string"
+            },
+            {
+              "name": "role",
+              "type": {
+                "ref": "identity.enum.user_role"
+              }
+            }
+          ]
+        }
+      ],
+      "enums": [
+        {
+          "id": "identity.enum.user_role",
+          "kind": "enum",
+          "name": "user_role",
+          "members": [
+            {
+              "name": "admin"
+            },
+            {
+              "name": "member"
+            },
+            {
+              "name": "guest"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "platform",
+      "kind": "module",
+      "name": "platform",
+      "imports": [],
+      "constitutions": [
+        {
+          "id": "platform.constitution.platform_standards",
+          "kind": "constitution",
+          "name": "platform_standards",
+          "applies_to": [],
+          "policies": [
+            {
+              "name": "backend",
+              "properties": {
+                "framework": "node",
+                "language": "typescript"
+              }
+            },
+            {
+              "name": "auth",
+              "properties": {
+                "provider": "oauth2",
+                "mfa": "required"
+              }
+            }
+          ]
+        }
+      ],
+      "deployments": [
+        {
+          "id": "platform.deployment.cloud",
+          "kind": "deployment",
+          "name": "cloud",
+          "environments": [
+            "platform.environment.production",
+            "platform.environment.staging"
+          ]
+        }
+      ],
+      "environments": [
+        {
+          "id": "platform.environment.production",
+          "kind": "environment",
+          "name": "production",
+          "url": "https://api.example.com",
+          "description": "Production environment"
+        },
+        {
+          "id": "platform.environment.staging",
+          "kind": "environment",
+          "name": "staging",
+          "url": "https://staging.example.com",
+          "description": "Staging environment"
+        }
+      ],
+      "privacies": [
+        {
+          "id": "platform.privacy.customer_privacy",
+          "kind": "privacy",
+          "name": "customer_privacy",
+          "applies_to": [
+            "identity.entity.user"
+          ],
+          "classification": "personal_data",
+          "retention": "7 years",
+          "exportable": null,
+          "erasable": true
+        }
+      ],
+      "secrets": [
+        {
+          "id": "platform.secret.stripe_api_key",
+          "kind": "secret",
+          "name": "stripe_api_key",
+          "source": "vault",
+          "description": "Stripe API key for payment processing"
+        }
+      ],
+      "securities": [
+        {
+          "id": "platform.security.billing_security",
+          "kind": "security",
+          "name": "billing_security",
+          "applies_to": [
+            "billing"
+          ]
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "billing",
+      "to": "billing.action.do_create_invoice",
+      "kind": "contains"
+    },
+    {
+      "from": "billing",
+      "to": "billing.action.do_upgrade_subscription",
+      "kind": "contains"
+    },
+    {
+      "from": "billing",
+      "to": "billing.capability.invoicing",
+      "kind": "contains"
+    },
+    {
+      "from": "billing",
+      "to": "billing.capability.subscription_mgmt",
+      "kind": "contains"
+    },
+    {
+      "from": "billing",
+      "to": "billing.entity.invoice",
+      "kind": "contains"
+    },
+    {
+      "from": "billing",
+      "to": "billing.entity.subscription",
+      "kind": "contains"
+    },
+    {
+      "from": "billing",
+      "to": "billing.enum.billing_error",
+      "kind": "contains"
+    },
+    {
+      "from": "billing",
+      "to": "billing.enum.invoice_status",
+      "kind": "contains"
+    },
+    {
+      "from": "billing",
+      "to": "billing.enum.plan_tier",
+      "kind": "contains"
+    },
+    {
+      "from": "billing",
+      "to": "billing.rule.invoice_total_positive",
+      "kind": "contains"
+    },
+    {
+      "from": "billing",
+      "to": "billing.strings.billing_strings",
+      "kind": "contains"
+    },
+    {
+      "from": "billing",
+      "to": "billing.surface.billing_dashboard",
+      "kind": "contains"
+    },
+    {
+      "from": "billing",
+      "to": "billing.test.invoice_exists",
+      "kind": "contains"
+    },
+    {
+      "from": "billing",
+      "to": "billing.test.subscription_exists",
+      "kind": "contains"
+    },
+    {
+      "from": "billing",
+      "to": "billing.workflow.create_invoice",
+      "kind": "contains"
+    },
+    {
+      "from": "billing",
+      "to": "billing.workflow.upgrade_subscription",
+      "kind": "contains"
+    },
+    {
+      "from": "billing.action.do_create_invoice",
+      "to": "billing.workflow.create_invoice",
+      "kind": "invokes"
+    },
+    {
+      "from": "billing.action.do_upgrade_subscription",
+      "to": "billing.workflow.upgrade_subscription",
+      "kind": "invokes"
+    },
+    {
+      "from": "billing.capability.invoicing",
+      "to": "identity.actor.admin",
+      "kind": "member_of"
+    },
+    {
+      "from": "billing.capability.subscription_mgmt",
+      "to": "identity.actor.admin",
+      "kind": "member_of"
+    },
+    {
+      "from": "billing.capability.subscription_mgmt",
+      "to": "identity.actor.customer",
+      "kind": "member_of"
+    },
+    {
+      "from": "billing.entity.invoice",
+      "to": "billing.enum.invoice_status",
+      "kind": "field_type"
+    },
+    {
+      "from": "billing.entity.invoice",
+      "to": "identity.entity.user",
+      "kind": "field_type"
+    },
+    {
+      "from": "billing.entity.subscription",
+      "to": "billing.enum.plan_tier",
+      "kind": "field_type"
+    },
+    {
+      "from": "billing.entity.subscription",
+      "to": "identity.entity.user",
+      "kind": "field_type"
+    },
+    {
+      "from": "billing.surface.billing_dashboard",
+      "to": "billing.entity.invoice",
+      "kind": "binds"
+    },
+    {
+      "from": "billing.surface.billing_dashboard",
+      "to": "billing.action.do_create_invoice",
+      "kind": "exposes_action"
+    },
+    {
+      "from": "billing.test.invoice_exists",
+      "to": "billing.entity.invoice",
+      "kind": "tests"
+    },
+    {
+      "from": "billing.test.subscription_exists",
+      "to": "billing.entity.subscription",
+      "kind": "tests"
+    },
+    {
+      "from": "billing.workflow.create_invoice",
+      "to": "billing.capability.invoicing",
+      "kind": "calls"
+    },
+    {
+      "from": "billing.workflow.create_invoice",
+      "to": "billing.entity.subscription",
+      "kind": "reads"
+    },
+    {
+      "from": "billing.workflow.create_invoice",
+      "to": "identity.entity.user",
+      "kind": "reads"
+    },
+    {
+      "from": "billing.workflow.create_invoice",
+      "to": "billing.entity.invoice",
+      "kind": "return_type"
+    },
+    {
+      "from": "billing.workflow.create_invoice",
+      "to": "billing.enum.billing_error",
+      "kind": "return_type"
+    },
+    {
+      "from": "billing.workflow.create_invoice",
+      "to": "billing.rule.invoice_total_positive",
+      "kind": "uses_rule"
+    },
+    {
+      "from": "billing.workflow.create_invoice",
+      "to": "billing.entity.invoice",
+      "kind": "writes"
+    },
+    {
+      "from": "billing.workflow.upgrade_subscription",
+      "to": "billing.capability.subscription_mgmt",
+      "kind": "calls"
+    },
+    {
+      "from": "billing.workflow.upgrade_subscription",
+      "to": "billing.enum.plan_tier",
+      "kind": "input_type"
+    },
+    {
+      "from": "billing.workflow.upgrade_subscription",
+      "to": "billing.entity.subscription",
+      "kind": "reads"
+    },
+    {
+      "from": "billing.workflow.upgrade_subscription",
+      "to": "billing.entity.subscription",
+      "kind": "return_type"
+    },
+    {
+      "from": "billing.workflow.upgrade_subscription",
+      "to": "billing.enum.billing_error",
+      "kind": "return_type"
+    },
+    {
+      "from": "billing.workflow.upgrade_subscription",
+      "to": "billing.entity.subscription",
+      "kind": "writes"
+    },
+    {
+      "from": "identity",
+      "to": "identity.actor.admin",
+      "kind": "contains"
+    },
+    {
+      "from": "identity",
+      "to": "identity.actor.customer",
+      "kind": "contains"
+    },
+    {
+      "from": "identity",
+      "to": "identity.entity.user",
+      "kind": "contains"
+    },
+    {
+      "from": "identity",
+      "to": "identity.enum.user_role",
+      "kind": "contains"
+    },
+    {
+      "from": "identity.entity.user",
+      "to": "identity.enum.user_role",
+      "kind": "field_type"
+    },
+    {
+      "from": "platform",
+      "to": "platform.constitution.platform_standards",
+      "kind": "contains"
+    },
+    {
+      "from": "platform",
+      "to": "platform.deployment.cloud",
+      "kind": "contains"
+    },
+    {
+      "from": "platform",
+      "to": "platform.environment.production",
+      "kind": "contains"
+    },
+    {
+      "from": "platform",
+      "to": "platform.environment.staging",
+      "kind": "contains"
+    },
+    {
+      "from": "platform",
+      "to": "platform.privacy.customer_privacy",
+      "kind": "contains"
+    },
+    {
+      "from": "platform",
+      "to": "platform.secret.stripe_api_key",
+      "kind": "contains"
+    },
+    {
+      "from": "platform",
+      "to": "platform.security.billing_security",
+      "kind": "contains"
+    },
+    {
+      "from": "platform.deployment.cloud",
+      "to": "platform.environment.production",
+      "kind": "includes_env"
+    },
+    {
+      "from": "platform.deployment.cloud",
+      "to": "platform.environment.staging",
+      "kind": "includes_env"
+    },
+    {
+      "from": "platform.privacy.customer_privacy",
+      "to": "identity.entity.user",
+      "kind": "governs"
+    },
+    {
+      "from": "product",
+      "to": "billing",
+      "kind": "contains"
+    },
+    {
+      "from": "product",
+      "to": "identity",
+      "kind": "contains"
+    },
+    {
+      "from": "product",
+      "to": "platform",
+      "kind": "contains"
+    }
+  ],
+  "metadata": {
+    "compiler": "prodara-compiler",
+    "compiled_at": "2026-03-18T20:01:22.493Z",
+    "source_files": [
+      "/Users/barnatoth/Repositories/prodara/prodara-compiler/examples/saas-billing/app.prd"
+    ]
+  }
+}

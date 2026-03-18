@@ -1,0 +1,13 @@
+// Surfaces define what the user sees and how they interact with the product.
+
+module todo {
+
+  // A view surface that displays all tasks and lets the user create new ones.
+  surface task_list {
+    kind: view                 // this surface is a read-oriented view
+    title: "Tasks"             // direct string — no localization needed here
+    binds: task                // data source: the task entity
+    actions: [create_task]     // available user actions
+  }
+
+}

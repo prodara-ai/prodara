@@ -1,0 +1,34 @@
+{
+  "name": "prodara",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Prodara — a spec-first language for building software products",
+  "workspaces": [
+    "packages/specification",
+    "packages/templates",
+    "packages/compiler",
+    "packages/cli",
+    "packages/lsp",
+    "packages/vscode"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:coverage": "npm run test:coverage --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present"
+  },
+  "license": "MIT",
+  "author": "Prodara Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prodara-ai/prodara.git"
+  },
+  "homepage": "https://github.com/prodara-ai/prodara#readme",
+  "bugs": {
+    "url": "https://github.com/prodara-ai/prodara/issues"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

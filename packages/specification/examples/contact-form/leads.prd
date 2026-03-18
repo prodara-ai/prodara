@@ -1,0 +1,167 @@
+/*
+  Leads module — a focused example showing form surfaces.
+  Demonstrates constructs not shown in other examples:
+    - surface with kind: form
+    - fields block on a surface
+    - hooks (submit)
+    - validation rules on form input
+    - validation governance
+    - transport and execution configuration
+*/
+
+module leads {
+
+  // --- Actor ---
+
+  actor visitor {
+    title: "Website Visitor"
+    description: "Anonymous user filling out the form"
+  }
+
+  // --- Capability ---
+
+  capability lead_capture {
+    title: "Lead Capture"
+    actors: [visitor]
+  }
+
+  // --- Domain model ---
+
+  enum submit_error {
+    invalid_email
+    message_too_short
+    submission_failed
+  }
+
+  entity lead {
+    lead_id: uuid
+    name: string
+    email: string
+    message: string
+    submitted_at: datetime
+  }
+
+  // --- Rules ---
+
+  // Validates that the email field is not empty.
+  // In v0.1, expressions compare field values — format validation
+  // (e.g., regex) belongs to generated implementation.
+  rule email_required {
+    entity: lead
+    condition: email != ""
+    message: leads.form_strings.email_required_message
+  }
+
+  rule message_not_empty {
+    entity: lead
+    condition: message != ""
+    message: leads.form_strings.message_required
+  }
+
+  // --- Workflow ---
+
+  workflow submit_lead {
+    capability: lead_capture
+
+    authorization {
+      visitor: [lead.create]
+    }
+
+    input {
+      name: string
+      email: string
+      message: string
+    }
+
+    writes {
+      lead
+    }
+
+    rules {
+      email_required
+      message_not_empty
+    }
+
+    effects {
+      audit "Lead submitted"
+      notify notifications.send_email
+    }
+
+    returns {
+      ok: lead
+      error: submit_error
+    }
+  }
+
+  // --- Action ---
+
+  action submit {
+    title: "Submit"
+    workflow: submit_lead
+  }
+
+  // --- Strings ---
+
+  strings form_strings {
+    form_title: "Contact Us"
+    name_label: "Your Name"
+    email_label: "Email Address"
+    message_label: "Message"
+    submit_label: "Send Message"
+    email_required_message: "Please enter your email address"
+    message_required: "Please enter a message"
+  }
+
+  // --- Surface ---
+
+  /*
+    A form surface — the key difference from a view surface.
+    Forms have a "fields" block that declares what the user fills in,
+    and hooks that trigger workflows on lifecycle events.
+  */
+  surface contact_form {
+    kind: form                         // form, not view
+    title: leads.form_strings.form_title
+    binds: lead
+
+    // Fields define the form inputs.
+    // Each field has a name and a type.
+    fields {
+      name: string
+      email: string
+      message: string
+    }
+
+    // Rules applied when the form is validated.
+    rules: [email_required, message_not_empty]
+
+    // The submit hook fires the workflow when the user submits.
+    hooks {
+      submit: submit_lead
+    }
+
+    actions: [submit]
+  }
+
+  // --- Validation governance ---
+
+  // Declares that the contact form must satisfy validation requirements.
+  validation form_validation {
+    applies_to: [contact_form]
+    requires: [input_sanitization, rate_limiting]
+    description: "Public-facing form must sanitize input and rate-limit"
+  }
+
+  // --- Test ---
+
+  test visitor_can_submit {
+    target: submit_lead
+
+    expect {
+      authorization {
+        visitor: allowed
+      }
+    }
+  }
+
+}

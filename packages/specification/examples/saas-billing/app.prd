@@ -1,0 +1,13 @@
+// Product declaration for a SaaS billing system.
+// This product has four modules, each with a different responsibility.
+
+product saas_billing {
+  title: "SaaS Billing"
+  version: "0.1.0"
+  modules: [
+    crm,                       // customer data
+    billing,                   // invoicing domain and behavior
+    design,                    // visual tokens and themes
+    platform                   // serialization and infrastructure
+  ]
+}

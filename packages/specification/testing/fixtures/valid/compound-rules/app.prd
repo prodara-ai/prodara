@@ -1,0 +1,54 @@
+product rules_test {
+  title: "Rules Test"
+  version: "0.1.0"
+  modules: [billing]
+}
+
+module billing {
+
+  entity invoice {
+    invoice_id: uuid
+    status: invoice_status
+    total: decimal
+    customer_email: string
+  }
+
+  enum invoice_status {
+    draft
+    issued
+    paid
+    cancelled
+  }
+
+  rule invoice_total_positive {
+    entity: invoice
+    condition: total > 0
+    message: billing.errors.total_positive
+  }
+
+  rule invoice_ready_to_issue {
+    entity: invoice
+    condition: total > 0 and status == draft and customer_email != ""
+    message: billing.errors.not_ready
+  }
+
+  rule invoice_not_cancelled {
+    entity: invoice
+    condition: not status == cancelled
+    message: billing.errors.is_cancelled
+  }
+
+  rule invoice_payable {
+    entity: invoice
+    condition: (status == issued or status == draft) and total > 0
+    message: billing.errors.not_payable
+  }
+
+  strings errors {
+    total_positive: "Invoice total must be positive"
+    not_ready: "Invoice is not ready to issue"
+    is_cancelled: "Invoice has been cancelled"
+    not_payable: "Invoice is not payable"
+  }
+
+}

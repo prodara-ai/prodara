@@ -1,0 +1,245 @@
+/*
+  Board module — the core domain of the task board.
+  Demonstrates constructs not shown in other examples:
+    - events with typed payloads
+    - workflows triggered by events (on:)
+    - decide/when branching in workflow steps
+    - input and reads blocks
+    - emit effects
+    - storage configuration with indexes
+    - spec-level tests with given/expect
+*/
+
+module board {
+
+  // --- Actors ---
+
+  actor member {
+    title: "Team Member"
+    description: "Any person on the team"
+  }
+
+  actor lead {
+    title: "Team Lead"
+    description: "Can reassign and archive tasks"
+  }
+
+  // --- Capability ---
+
+  capability task_tracking {
+    title: "Task Tracking"
+    actors: [member, lead]
+  }
+
+  // --- Domain model ---
+
+  // Kanban column states.
+  enum task_status {
+    backlog
+    in_progress
+    review
+    done
+  }
+
+  enum priority {
+    low
+    medium
+    high
+  }
+
+  enum move_error {
+    already_done
+    invalid_transition
+  }
+
+  entity task {
+    task_id: uuid
+    title: string
+    description: optional<string>
+    status: task_status = backlog   // new tasks start in backlog
+    priority: priority = medium
+    assignee: optional<string>
+  }
+
+  // --- Events ---
+
+  // An event with a typed payload.
+  // Events can trigger workflows and be emitted as effects.
+  event task_moved {
+    payload: task
+    description: "Fired whenever a task changes column"
+  }
+
+  event task_completed {
+    payload: task
+    description: "Fired when a task reaches done"
+  }
+
+  // --- Rules ---
+
+  rule task_must_have_title {
+    entity: task
+    condition: title != ""
+    message: board.board_strings.title_required
+  }
+
+  // --- Workflows ---
+
+  /*
+    Move a task from one column to the next.
+    Uses decide/when to branch based on the current status
+    and emit different events depending on the outcome.
+  */
+  workflow move_task {
+    capability: task_tracking
+
+    authorization {
+      member: [task.update]
+      lead: [task.update]
+    }
+
+    input {
+      task_id: uuid               // which task to move
+      target_status: task_status  // where to move it
+    }
+
+    reads {
+      task                        // need to check current status
+    }
+
+    writes {
+      task
+    }
+
+    steps {
+      call validate_move
+
+      decide current_status {
+        when done -> fail already_done
+        when review -> call finalize_task
+      }
+
+      call apply_transition
+    }
+
+    transitions {
+      task.status: backlog -> in_progress
+      task.status: in_progress -> review
+      task.status: review -> done
+    }
+
+    effects {
+      audit "Task moved"
+      emit task_moved              // emit the event declared above
+    }
+
+    returns {
+      ok: task
+      error: move_error
+    }
+  }
+
+  // Workflow triggered by an event (not by an action).
+  // The "on:" property binds it to the task_completed event.
+  workflow notify_completion {
+    on: task_completed
+
+    reads {
+      task
+    }
+
+    effects {
+      notify notifications.send_email
+      audit "Completion notification sent"
+    }
+
+    returns {
+      ok: boolean
+    }
+  }
+
+  // --- Actions ---
+
+  action move_task {
+    title: "Move Task"
+    workflow: move_task
+  }
+
+  // --- Strings ---
+
+  strings board_strings {
+    board_title: "Task Board"
+    title_required: "Task title is required"
+  }
+
+  // --- Surfaces ---
+
+  // The main board view — displays all tasks in a kanban layout.
+  surface board_view {
+    kind: view
+    title: board.board_strings.board_title
+    binds: task
+    actions: [move_task]
+
+    hooks {
+      load: move_task             // fetches tasks when the surface loads
+    }
+  }
+
+  // --- Storage ---
+
+  // Tells the compiler how to persist the task entity.
+  storage task_storage {
+    target: task
+    model: relational
+    table: "tasks"
+    indexes: [
+      [status],                   // filter by column
+      [assignee],                 // filter by person
+      unique [task_id]            // primary key
+    ]
+  }
+
+  // --- Tests ---
+
+  // Test with a given/expect block.
+  // Asserts that a specific transition is declared in the workflow.
+  test move_from_backlog_to_in_progress {
+    target: move_task
+    description: "Tasks can move from backlog to in_progress"
+
+    given {
+      task.status: backlog
+    }
+
+    expect {
+      transition: "task.status: backlog -> in_progress"
+    }
+  }
+
+  // Test that verifies a rule condition.
+  test title_is_required {
+    target: task_must_have_title
+
+    given {
+      task.title: ""
+    }
+
+    expect {
+      invalid_when: "title != \"\""
+    }
+  }
+
+  // Authorization test — both roles can move tasks.
+  test any_member_can_move {
+    target: move_task
+
+    expect {
+      authorization {
+        member: allowed
+        lead: allowed
+      }
+    }
+  }
+
+}

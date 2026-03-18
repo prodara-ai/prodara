@@ -1,0 +1,53 @@
+product enterprise {
+  title: "Enterprise"
+  version: "0.1.0"
+  modules: [identity, billing]
+}
+
+module identity {
+
+  actor admin {
+    description: "System administrator"
+  }
+
+  entity user {
+    user_id: uuid
+    email: string
+    role: user_role
+  }
+
+  enum user_role {
+    admin
+    member
+    guest
+  }
+
+}
+
+module billing {
+  import admin from identity
+  import user from identity
+
+  entity invoice {
+    invoice_id: uuid
+    owner: user
+    total: decimal
+  }
+
+  capability invoicing {
+    title: "Invoice Management"
+    actors: [admin]
+  }
+
+  workflow create_invoice {
+    capability: invoicing
+
+    reads { user }
+    writes { invoice }
+
+    returns {
+      ok: invoice
+    }
+  }
+
+}

@@ -1,0 +1,8 @@
+module billing {
+  import user from identity
+
+  entity invoice {
+    invoice_id: uuid
+    owner: user
+  }
+}

@@ -1,0 +1,16 @@
+// Identity module — defines actors shared across the entire product.
+// Other modules import these instead of redefining their own actors.
+
+module identity {
+
+  actor admin {
+    title: "Administrator"
+    description: "Full system access"
+  }
+
+  actor accountant {
+    title: "Accountant"
+    description: "Finance operations"
+  }
+
+}

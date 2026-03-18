@@ -1,0 +1,8 @@
+// Every Prodara workspace has exactly one product declaration.
+// It names the product and lists all modules that belong to it.
+
+product todo_app {
+  title: "Todo App"
+  version: "0.1.0"
+  modules: [todo]           // this product has a single module
+}

@@ -1,0 +1,716 @@
+{
+  "format": "prodara-product-graph",
+  "version": "0.1.0",
+  "product": {
+    "id": "product",
+    "kind": "product",
+    "name": "task_board",
+    "title": "Task Board",
+    "version": "0.1.0",
+    "modules": [
+      "board",
+      "design",
+      "platform"
+    ],
+    "publishes": null
+  },
+  "modules": [
+    {
+      "id": "board",
+      "kind": "module",
+      "name": "board",
+      "imports": [],
+      "actions": [
+        {
+          "id": "board.action.do_move_task",
+          "kind": "action",
+          "name": "do_move_task",
+          "title": "Move Task",
+          "workflow": "board.workflow.move_task"
+        }
+      ],
+      "actors": [
+        {
+          "id": "board.actor.lead",
+          "kind": "actor",
+          "name": "lead",
+          "title": "Team Lead",
+          "description": "Can reassign and archive tasks"
+        },
+        {
+          "id": "board.actor.member",
+          "kind": "actor",
+          "name": "member",
+          "title": "Team Member",
+          "description": "Any person on the team"
+        }
+      ],
+      "capabilities": [
+        {
+          "id": "board.capability.task_tracking",
+          "kind": "capability",
+          "name": "task_tracking",
+          "title": "Task Tracking",
+          "description": null,
+          "actors": [
+            "board.actor.lead",
+            "board.actor.member"
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "id": "board.entity.task",
+          "kind": "entity",
+          "name": "task",
+          "fields": [
+            {
+              "name": "task_id",
+              "type": "uuid"
+            },
+            {
+              "name": "title",
+              "type": "string"
+            },
+            {
+              "name": "description",
+              "type": {
+                "generic": "optional",
+                "arg": "string"
+              }
+            },
+            {
+              "name": "status",
+              "type": {
+                "ref": "board.enum.task_status"
+              }
+            },
+            {
+              "name": "priority",
+              "type": {
+                "ref": "board.enum.priority"
+              }
+            },
+            {
+              "name": "assignee",
+              "type": {
+                "generic": "optional",
+                "arg": "string"
+              }
+            }
+          ]
+        }
+      ],
+      "enums": [
+        {
+          "id": "board.enum.move_error",
+          "kind": "enum",
+          "name": "move_error",
+          "members": [
+            {
+              "name": "already_done"
+            },
+            {
+              "name": "invalid_transition"
+            }
+          ]
+        },
+        {
+          "id": "board.enum.priority",
+          "kind": "enum",
+          "name": "priority",
+          "members": [
+            {
+              "name": "low"
+            },
+            {
+              "name": "medium"
+            },
+            {
+              "name": "high"
+            }
+          ]
+        },
+        {
+          "id": "board.enum.task_status",
+          "kind": "enum",
+          "name": "task_status",
+          "members": [
+            {
+              "name": "backlog"
+            },
+            {
+              "name": "in_progress"
+            },
+            {
+              "name": "review"
+            },
+            {
+              "name": "done"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "id": "board.event.task_completed",
+          "kind": "event",
+          "name": "task_completed",
+          "payload": {
+            "ref": "board.entity.task"
+          },
+          "description": "Fired when a task reaches done"
+        },
+        {
+          "id": "board.event.task_moved",
+          "kind": "event",
+          "name": "task_moved",
+          "payload": {
+            "ref": "board.entity.task"
+          },
+          "description": "Fired whenever a task changes column"
+        }
+      ],
+      "rules": [
+        {
+          "id": "board.rule.task_must_have_title",
+          "kind": "rule",
+          "name": "task_must_have_title",
+          "entity": "board.entity.task",
+          "condition": {
+            "op": "!=",
+            "left": {
+              "access": [
+                "title"
+              ]
+            },
+            "right": {
+              "literal": "",
+              "type": "string"
+            }
+          },
+          "message": "board.board_strings.title_required"
+        }
+      ],
+      "storages": [
+        {
+          "id": "board.storage.task_storage",
+          "kind": "storage",
+          "name": "task_storage",
+          "target": "board.entity.task",
+          "model": "relational",
+          "table": "tasks"
+        }
+      ],
+      "strings": [
+        {
+          "id": "board.strings.board_strings",
+          "kind": "strings",
+          "name": "board_strings",
+          "entries": {
+            "board_title": "Task Board",
+            "title_required": "Task title is required"
+          }
+        }
+      ],
+      "surfaces": [
+        {
+          "id": "board.surface.board_view",
+          "kind": "surface",
+          "name": "board_view",
+          "surface_kind": "view",
+          "title": "board.board_strings.board_title",
+          "capability": null,
+          "binds": "board.entity.task"
+        }
+      ],
+      "tests": [
+        {
+          "id": "board.test.move_task_workflow_exists",
+          "kind": "test",
+          "name": "move_task_workflow_exists",
+          "target": "board.workflow.move_task",
+          "description": null
+        },
+        {
+          "id": "board.test.task_entity_exists",
+          "kind": "test",
+          "name": "task_entity_exists",
+          "target": "board.entity.task",
+          "description": null
+        }
+      ],
+      "workflows": [
+        {
+          "id": "board.workflow.move_task",
+          "kind": "workflow",
+          "name": "move_task",
+          "capability": "board.capability.task_tracking",
+          "authorization": [
+            {
+              "actor": "board.actor.member",
+              "permissions": [
+                "task.update"
+              ]
+            },
+            {
+              "actor": "board.actor.lead",
+              "permissions": [
+                "task.update"
+              ]
+            }
+          ],
+          "input": [
+            {
+              "name": "task_id",
+              "type": "uuid"
+            },
+            {
+              "name": "target_status",
+              "type": {
+                "ref": "board.enum.task_status"
+              }
+            }
+          ],
+          "reads": [
+            "board.entity.task"
+          ],
+          "writes": [
+            "board.entity.task"
+          ],
+          "steps": [
+            {
+              "call": "validate_move"
+            },
+            {
+              "decide": "current_status",
+              "branches": [
+                {
+                  "when": "done",
+                  "action": {
+                    "fail": "already_done"
+                  }
+                },
+                {
+                  "when": "review",
+                  "action": {
+                    "call": "finalize_task"
+                  }
+                }
+              ]
+            },
+            {
+              "call": "apply_transition"
+            }
+          ],
+          "transitions": [
+            {
+              "entity": "board.entity.task",
+              "field": "status",
+              "from": "backlog",
+              "to": "in_progress"
+            },
+            {
+              "entity": "board.entity.task",
+              "field": "status",
+              "from": "in_progress",
+              "to": "review"
+            },
+            {
+              "entity": "board.entity.task",
+              "field": "status",
+              "from": "review",
+              "to": "done"
+            }
+          ],
+          "effects": [
+            {
+              "audit": "Task moved"
+            },
+            {
+              "emit": "board.event.task_moved"
+            }
+          ],
+          "returns": [
+            {
+              "name": "ok",
+              "type": {
+                "ref": "board.entity.task"
+              }
+            },
+            {
+              "name": "error",
+              "type": {
+                "ref": "board.enum.move_error"
+              }
+            }
+          ]
+        },
+        {
+          "id": "board.workflow.notify_completion",
+          "kind": "workflow",
+          "name": "notify_completion",
+          "reads": [
+            "board.entity.task"
+          ],
+          "effects": [
+            {
+              "audit": "Completion notification sent"
+            }
+          ],
+          "returns": [
+            {
+              "name": "ok",
+              "type": "boolean"
+            }
+          ],
+          "trigger": "board.event.task_completed"
+        }
+      ]
+    },
+    {
+      "id": "design",
+      "kind": "module",
+      "name": "design",
+      "imports": [],
+      "tokens": [
+        {
+          "id": "design.tokens.base",
+          "kind": "tokens",
+          "name": "base",
+          "categories": [
+            {
+              "name": "color",
+              "tokens": [
+                {
+                  "name": "brand_primary",
+                  "value": "#6366F1"
+                },
+                {
+                  "name": "surface_background",
+                  "value": "#F3F4F6"
+                },
+                {
+                  "name": "column_background",
+                  "value": "#FFFFFF"
+                }
+              ]
+            },
+            {
+              "name": "spacing",
+              "tokens": [
+                {
+                  "name": "sm",
+                  "value": 8
+                },
+                {
+                  "name": "md",
+                  "value": 16
+                },
+                {
+                  "name": "lg",
+                  "value": 24
+                }
+              ]
+            },
+            {
+              "name": "breakpoint",
+              "tokens": [
+                {
+                  "name": "sm",
+                  "value": 480
+                },
+                {
+                  "name": "md",
+                  "value": 768
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "platform",
+      "kind": "module",
+      "name": "platform",
+      "imports": [],
+      "renderings": [
+        {
+          "id": "platform.rendering.board_layout",
+          "kind": "rendering",
+          "name": "board_layout",
+          "target": "board.surface.board_view",
+          "platform": "web",
+          "layout": "grid"
+        }
+      ],
+      "schedules": [
+        {
+          "id": "platform.schedule.daily_archive",
+          "kind": "schedule",
+          "name": "daily_archive",
+          "cron": "0 0 * * *",
+          "description": "Archive completed tasks older than 30 days"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "board",
+      "to": "board.action.do_move_task",
+      "kind": "contains"
+    },
+    {
+      "from": "board",
+      "to": "board.actor.lead",
+      "kind": "contains"
+    },
+    {
+      "from": "board",
+      "to": "board.actor.member",
+      "kind": "contains"
+    },
+    {
+      "from": "board",
+      "to": "board.capability.task_tracking",
+      "kind": "contains"
+    },
+    {
+      "from": "board",
+      "to": "board.entity.task",
+      "kind": "contains"
+    },
+    {
+      "from": "board",
+      "to": "board.enum.move_error",
+      "kind": "contains"
+    },
+    {
+      "from": "board",
+      "to": "board.enum.priority",
+      "kind": "contains"
+    },
+    {
+      "from": "board",
+      "to": "board.enum.task_status",
+      "kind": "contains"
+    },
+    {
+      "from": "board",
+      "to": "board.event.task_completed",
+      "kind": "contains"
+    },
+    {
+      "from": "board",
+      "to": "board.event.task_moved",
+      "kind": "contains"
+    },
+    {
+      "from": "board",
+      "to": "board.rule.task_must_have_title",
+      "kind": "contains"
+    },
+    {
+      "from": "board",
+      "to": "board.storage.task_storage",
+      "kind": "contains"
+    },
+    {
+      "from": "board",
+      "to": "board.strings.board_strings",
+      "kind": "contains"
+    },
+    {
+      "from": "board",
+      "to": "board.surface.board_view",
+      "kind": "contains"
+    },
+    {
+      "from": "board",
+      "to": "board.test.move_task_workflow_exists",
+      "kind": "contains"
+    },
+    {
+      "from": "board",
+      "to": "board.test.task_entity_exists",
+      "kind": "contains"
+    },
+    {
+      "from": "board",
+      "to": "board.workflow.move_task",
+      "kind": "contains"
+    },
+    {
+      "from": "board",
+      "to": "board.workflow.notify_completion",
+      "kind": "contains"
+    },
+    {
+      "from": "board.action.do_move_task",
+      "to": "board.workflow.move_task",
+      "kind": "invokes"
+    },
+    {
+      "from": "board.capability.task_tracking",
+      "to": "board.actor.lead",
+      "kind": "member_of"
+    },
+    {
+      "from": "board.capability.task_tracking",
+      "to": "board.actor.member",
+      "kind": "member_of"
+    },
+    {
+      "from": "board.entity.task",
+      "to": "board.enum.priority",
+      "kind": "field_type"
+    },
+    {
+      "from": "board.entity.task",
+      "to": "board.enum.task_status",
+      "kind": "field_type"
+    },
+    {
+      "from": "board.event.task_completed",
+      "to": "board.entity.task",
+      "kind": "payload_type"
+    },
+    {
+      "from": "board.event.task_moved",
+      "to": "board.entity.task",
+      "kind": "payload_type"
+    },
+    {
+      "from": "board.storage.task_storage",
+      "to": "board.entity.task",
+      "kind": "refines_entity"
+    },
+    {
+      "from": "board.surface.board_view",
+      "to": "board.entity.task",
+      "kind": "binds"
+    },
+    {
+      "from": "board.surface.board_view",
+      "to": "board.action.do_move_task",
+      "kind": "exposes_action"
+    },
+    {
+      "from": "board.test.move_task_workflow_exists",
+      "to": "board.workflow.move_task",
+      "kind": "tests"
+    },
+    {
+      "from": "board.test.task_entity_exists",
+      "to": "board.entity.task",
+      "kind": "tests"
+    },
+    {
+      "from": "board.workflow.move_task",
+      "to": "board.capability.task_tracking",
+      "kind": "calls"
+    },
+    {
+      "from": "board.workflow.move_task",
+      "to": "board.event.task_moved",
+      "kind": "emits"
+    },
+    {
+      "from": "board.workflow.move_task",
+      "to": "board.enum.task_status",
+      "kind": "input_type"
+    },
+    {
+      "from": "board.workflow.move_task",
+      "to": "board.entity.task",
+      "kind": "reads"
+    },
+    {
+      "from": "board.workflow.move_task",
+      "to": "board.entity.task",
+      "kind": "return_type"
+    },
+    {
+      "from": "board.workflow.move_task",
+      "to": "board.enum.move_error",
+      "kind": "return_type"
+    },
+    {
+      "from": "board.workflow.move_task",
+      "to": "board.entity.task",
+      "kind": "transitions"
+    },
+    {
+      "from": "board.workflow.move_task",
+      "to": "board.entity.task",
+      "kind": "transitions"
+    },
+    {
+      "from": "board.workflow.move_task",
+      "to": "board.entity.task",
+      "kind": "transitions"
+    },
+    {
+      "from": "board.workflow.move_task",
+      "to": "board.entity.task",
+      "kind": "writes"
+    },
+    {
+      "from": "board.workflow.notify_completion",
+      "to": "board.entity.task",
+      "kind": "reads"
+    },
+    {
+      "from": "board.workflow.notify_completion",
+      "to": "board.event.task_completed",
+      "kind": "triggers_on"
+    },
+    {
+      "from": "design",
+      "to": "design.tokens.base",
+      "kind": "contains"
+    },
+    {
+      "from": "platform",
+      "to": "platform.rendering.board_layout",
+      "kind": "contains"
+    },
+    {
+      "from": "platform",
+      "to": "platform.schedule.daily_archive",
+      "kind": "contains"
+    },
+    {
+      "from": "platform.rendering.board_layout",
+      "to": "board.surface.board_view",
+      "kind": "targets_surface"
+    },
+    {
+      "from": "product",
+      "to": "board",
+      "kind": "contains"
+    },
+    {
+      "from": "product",
+      "to": "design",
+      "kind": "contains"
+    },
+    {
+      "from": "product",
+      "to": "platform",
+      "kind": "contains"
+    }
+  ],
+  "metadata": {
+    "compiler": "prodara-compiler",
+    "compiled_at": "2026-03-18T20:01:22.436Z",
+    "source_files": [
+      "/Users/barnatoth/Repositories/prodara/prodara-compiler/examples/task-board/app.prd",
+      "/Users/barnatoth/Repositories/prodara/prodara-compiler/examples/task-board/board.prd",
+      "/Users/barnatoth/Repositories/prodara/prodara-compiler/examples/task-board/design.prd",
+      "/Users/barnatoth/Repositories/prodara/prodara-compiler/examples/task-board/platform.prd"
+    ]
+  }
+}

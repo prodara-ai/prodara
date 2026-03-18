@@ -1,0 +1,10 @@
+// Invoice Generator — produces numbered PDF invoices.
+// Demonstrates: extensions with contract blocks,
+// custom_logic and custom_rendering extension kinds,
+// and how extensions attach to workflows.
+
+product invoice_gen {
+  title: "Invoice Generator"
+  version: "0.1.0"
+  modules: [invoicing, platform]
+}

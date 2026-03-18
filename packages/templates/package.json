@@ -1,0 +1,51 @@
+{
+  "name": "@prodara/templates",
+  "version": "0.1.0",
+  "description": "Prompt templates for Prodara pipeline phases, reviewers, and platform adapters",
+  "author": "Prodara Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prodara-ai/prodara.git",
+    "directory": "packages/templates"
+  },
+  "homepage": "https://github.com/prodara-ai/prodara/tree/main/packages/templates#readme",
+  "bugs": {
+    "url": "https://github.com/prodara-ai/prodara/issues"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "prodara",
+    "templates",
+    "prompts"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.9",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.9"
+  }
+}

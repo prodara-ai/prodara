@@ -1,0 +1,319 @@
+{
+  "format": "prodara-plan",
+  "version": "0.1.0",
+  "changes": [
+    {
+      "nodeId": "billing",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "billing.action.do_create_invoice",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "billing.action.do_upgrade_subscription",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "billing.capability.invoicing",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "billing.capability.subscription_mgmt",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "billing.entity.invoice",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "billing.entity.subscription",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "billing.enum.billing_error",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "billing.enum.invoice_status",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "billing.enum.plan_tier",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "billing.rule.invoice_total_positive",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "billing.strings.billing_strings",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "billing.surface.billing_dashboard",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "billing.test.invoice_exists",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "billing.test.subscription_exists",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "billing.workflow.create_invoice",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "billing.workflow.upgrade_subscription",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "identity",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "identity.actor.admin",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "identity.actor.customer",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "identity.entity.user",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "identity.enum.user_role",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "platform",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "platform.constitution.platform_standards",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "platform.deployment.cloud",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "platform.environment.production",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "platform.environment.staging",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "platform.privacy.customer_privacy",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "platform.secret.stripe_api_key",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "platform.security.billing_security",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "product",
+      "changeKind": "added"
+    }
+  ],
+  "impacts": [],
+  "tasks": [
+    {
+      "taskId": "task-0001",
+      "action": "generate",
+      "nodeId": "product",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0002",
+      "action": "generate",
+      "nodeId": "billing",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0003",
+      "action": "generate",
+      "nodeId": "billing.action.do_create_invoice",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0004",
+      "action": "generate",
+      "nodeId": "billing.action.do_upgrade_subscription",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0005",
+      "action": "generate",
+      "nodeId": "billing.capability.invoicing",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0006",
+      "action": "generate",
+      "nodeId": "billing.capability.subscription_mgmt",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0007",
+      "action": "generate",
+      "nodeId": "billing.entity.invoice",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0008",
+      "action": "generate",
+      "nodeId": "billing.entity.subscription",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0009",
+      "action": "generate",
+      "nodeId": "billing.enum.billing_error",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0010",
+      "action": "generate",
+      "nodeId": "billing.enum.invoice_status",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0011",
+      "action": "generate",
+      "nodeId": "billing.enum.plan_tier",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0012",
+      "action": "generate",
+      "nodeId": "billing.rule.invoice_total_positive",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0013",
+      "action": "generate",
+      "nodeId": "billing.strings.billing_strings",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0014",
+      "action": "generate",
+      "nodeId": "billing.surface.billing_dashboard",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0015",
+      "action": "generate",
+      "nodeId": "billing.test.invoice_exists",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0016",
+      "action": "generate",
+      "nodeId": "billing.test.subscription_exists",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0017",
+      "action": "generate",
+      "nodeId": "billing.workflow.create_invoice",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0018",
+      "action": "generate",
+      "nodeId": "billing.workflow.upgrade_subscription",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0019",
+      "action": "generate",
+      "nodeId": "identity",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0020",
+      "action": "generate",
+      "nodeId": "identity.actor.admin",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0021",
+      "action": "generate",
+      "nodeId": "identity.actor.customer",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0022",
+      "action": "generate",
+      "nodeId": "identity.entity.user",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0023",
+      "action": "generate",
+      "nodeId": "identity.enum.user_role",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0024",
+      "action": "generate",
+      "nodeId": "platform",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0025",
+      "action": "generate",
+      "nodeId": "platform.constitution.platform_standards",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0026",
+      "action": "generate",
+      "nodeId": "platform.deployment.cloud",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0027",
+      "action": "generate",
+      "nodeId": "platform.environment.production",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0028",
+      "action": "generate",
+      "nodeId": "platform.environment.staging",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0029",
+      "action": "generate",
+      "nodeId": "platform.privacy.customer_privacy",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0030",
+      "action": "generate",
+      "nodeId": "platform.secret.stripe_api_key",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0031",
+      "action": "generate",
+      "nodeId": "platform.security.billing_security",
+      "reason": "initial build"
+    }
+  ]
+}

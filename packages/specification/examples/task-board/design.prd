@@ -1,0 +1,24 @@
+// Design tokens for the task board.
+
+module design {
+
+  tokens base {
+    color: {
+      brand_primary: "#6366F1"
+      surface_background: "#F3F4F6"
+      column_background: "#FFFFFF"
+    }
+
+    spacing: {
+      sm: 8
+      md: 16
+      lg: 24
+    }
+
+    breakpoint: {
+      sm: 480
+      md: 768
+    }
+  }
+
+}

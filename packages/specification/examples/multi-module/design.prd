@@ -1,0 +1,11 @@
+// Design module — minimal token set for this example.
+
+module design {
+
+  tokens base {
+    color: {
+      surface_background: "#FFFFFF"
+    }
+  }
+
+}

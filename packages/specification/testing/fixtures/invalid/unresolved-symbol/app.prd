@@ -1,0 +1,11 @@
+module billing {
+
+  workflow create_invoice {
+
+    writes {
+      missing_entity
+    }
+
+  }
+
+}

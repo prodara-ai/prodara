@@ -1,0 +1,12 @@
+// CRM module — defines customer data.
+// Other modules import "customer" when they need to reference it.
+
+module crm {
+
+  entity customer {
+    customer_id: uuid
+    name: string
+    email: string
+  }
+
+}

@@ -1,0 +1,9 @@
+// Task Board — a kanban-style project tracker.
+// Demonstrates: events, schedules, workflow branching,
+// rendering with grid layout, storage, and spec-level tests.
+
+product task_board {
+  title: "Task Board"
+  version: "0.1.0"
+  modules: [board, design, platform]
+}

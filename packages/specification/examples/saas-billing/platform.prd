@@ -1,0 +1,12 @@
+// Platform module — serialization and infrastructure configuration.
+
+module platform {
+
+  // Serialization policy — controls how data is formatted for APIs.
+  serialization default {
+    format: json
+    naming: snake_case
+    dates: iso8601
+  }
+
+}

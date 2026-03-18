@@ -1,0 +1,40 @@
+product governance_test {
+  title: "Governance Test"
+  version: "0.1.0"
+  modules: [core]
+}
+
+module core {
+
+  entity customer {
+    customer_id: uuid
+    email: string
+    name: string
+  }
+
+  constitution platform_standards {
+    description: "Platform-wide policies"
+
+    policies {
+      backend {
+        framework: "kotlin"
+      }
+      auth {
+        provider: "oauth2"
+      }
+    }
+  }
+
+  security billing_security {
+    applies_to: [core]
+    requires: [audit_log]
+  }
+
+  privacy customer_privacy {
+    applies_to: [customer]
+    classification: personal_data
+    retention: "7 years"
+    erasable: true
+  }
+
+}

@@ -1,0 +1,6 @@
+// Comprehensive test fixture covering all major language constructs.
+product task_board {
+  title: "Task Board"
+  version: "0.1.0"
+  modules: [board, design, platform]
+}

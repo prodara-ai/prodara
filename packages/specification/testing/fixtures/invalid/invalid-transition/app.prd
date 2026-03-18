@@ -1,0 +1,22 @@
+module billing {
+
+  entity invoice {
+    invoice_id: uuid
+    status: invoice_status
+  }
+
+  enum invoice_status {
+    draft
+    issued
+  }
+
+  workflow issue_invoice {
+    writes { invoice }
+    transitions { invoice.status: draft -> approved }
+
+    returns {
+      ok: invoice
+    }
+  }
+
+}

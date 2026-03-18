@@ -1,0 +1,158 @@
+module board {
+
+  actor member {
+    title: "Team Member"
+    description: "Any person on the team"
+  }
+
+  actor lead {
+    title: "Team Lead"
+    description: "Can reassign and archive tasks"
+  }
+
+  capability task_tracking {
+    title: "Task Tracking"
+    actors: [member, lead]
+  }
+
+  enum task_status {
+    backlog
+    in_progress
+    review
+    done
+  }
+
+  enum priority {
+    low
+    medium
+    high
+  }
+
+  enum move_error {
+    already_done
+    invalid_transition
+  }
+
+  entity task {
+    task_id: uuid
+    title: string
+    description: optional<string>
+    status: task_status = backlog
+    priority: priority = medium
+    assignee: optional<string>
+  }
+
+  event task_moved {
+    payload: task
+    description: "Fired whenever a task changes column"
+  }
+
+  event task_completed {
+    payload: task
+    description: "Fired when a task reaches done"
+  }
+
+  rule task_must_have_title {
+    entity: task
+    condition: title != ""
+    message: board.board_strings.title_required
+  }
+
+  workflow move_task {
+    capability: task_tracking
+
+    authorization {
+      member: [task.update]
+      lead: [task.update]
+    }
+
+    input {
+      task_id: uuid
+      target_status: task_status
+    }
+
+    reads {
+      task
+    }
+
+    writes {
+      task
+    }
+
+    steps {
+      call validate_move
+
+      decide current_status {
+        when done -> fail already_done
+        when review -> call finalize_task
+      }
+
+      call apply_transition
+    }
+
+    transitions {
+      task.status: backlog -> in_progress
+      task.status: in_progress -> review
+      task.status: review -> done
+    }
+
+    effects {
+      audit "Task moved"
+      emit task_moved
+    }
+
+    returns {
+      ok: task
+      error: move_error
+    }
+  }
+
+  workflow notify_completion {
+    on: task_completed
+
+    reads {
+      task
+    }
+
+    effects {
+      audit "Completion notification sent"
+    }
+
+    returns {
+      ok: boolean
+    }
+  }
+
+  action do_move_task {
+    title: "Move Task"
+    workflow: move_task
+  }
+
+  strings board_strings {
+    board_title: "Task Board"
+    title_required: "Task title is required"
+  }
+
+  surface board_view {
+    kind: view
+    title: board.board_strings.board_title
+    binds: task
+    actions: [do_move_task]
+
+    hooks {
+      load: do_move_task
+    }
+  }
+
+  storage task_storage {
+    target: task
+    model: relational
+    table: "tasks"
+    indexes: [
+      [status],
+      [assignee],
+      unique [task_id]
+    ]
+  }
+
+}

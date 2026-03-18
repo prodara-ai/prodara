@@ -1,0 +1,20 @@
+/*
+  Enterprise Suite — a multi-module product that demonstrates
+  advanced Prodara features: shared actors via import, state
+  machine transitions, governance, runtime infrastructure,
+  cross-product references, and spec-level testing.
+*/
+
+product enterprise_suite {
+  title: "Enterprise Suite"
+  version: "0.1.0"
+  modules: [identity, billing, design, platform]
+
+  // The publishes block controls what other products can consume
+  // via product_ref. Anything not listed here is private.
+  publishes {
+    actors: [identity.admin, identity.accountant]
+    entities: [billing.invoice]
+    events: [billing.invoice_issued]
+  }
+}

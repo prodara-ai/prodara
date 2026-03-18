@@ -1,0 +1,34 @@
+// Platform module — runtime and rendering configuration.
+
+module platform {
+
+  // --- Execution ---
+
+  // The create_invoice workflow runs synchronously so the
+  // caller gets the numbered invoice back immediately.
+  execution invoice_creation {
+    target: invoicing.create_invoice
+    mode: sync
+    description: "Synchronous invoice creation"
+  }
+
+  // --- Storage ---
+
+  storage invoice_storage {
+    target: invoicing.invoice
+    model: relational
+    table: "invoices"
+    indexes: [
+      unique [invoice_id],               // primary key
+      [status],                          // filter by status
+      [customer_name]                    // look up by customer
+    ]
+  }
+
+  // --- Serialization ---
+
+  serialization invoice_json {
+    target: invoicing.invoice
+    format: json
+  }
+}

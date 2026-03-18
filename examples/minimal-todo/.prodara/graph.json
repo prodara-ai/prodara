@@ -1,0 +1,234 @@
+{
+  "format": "prodara-product-graph",
+  "version": "0.1.0",
+  "product": {
+    "id": "product",
+    "kind": "product",
+    "name": "todo_app",
+    "title": "Todo App",
+    "version": "0.1.0",
+    "modules": [
+      "todo"
+    ],
+    "publishes": null
+  },
+  "modules": [
+    {
+      "id": "todo",
+      "kind": "module",
+      "name": "todo",
+      "imports": [],
+      "actions": [
+        {
+          "id": "todo.action.do_create_task",
+          "kind": "action",
+          "name": "do_create_task",
+          "title": null,
+          "workflow": "todo.workflow.create_task"
+        }
+      ],
+      "actors": [
+        {
+          "id": "todo.actor.user",
+          "kind": "actor",
+          "name": "user",
+          "title": "User",
+          "description": null
+        }
+      ],
+      "capabilities": [
+        {
+          "id": "todo.capability.task_management",
+          "kind": "capability",
+          "name": "task_management",
+          "title": "Task Management",
+          "description": null,
+          "actors": []
+        }
+      ],
+      "entities": [
+        {
+          "id": "todo.entity.task",
+          "kind": "entity",
+          "name": "task",
+          "fields": [
+            {
+              "name": "task_id",
+              "type": "uuid"
+            },
+            {
+              "name": "title",
+              "type": "string"
+            },
+            {
+              "name": "done",
+              "type": "boolean"
+            }
+          ]
+        }
+      ],
+      "enums": [
+        {
+          "id": "todo.enum.task_error",
+          "kind": "enum",
+          "name": "task_error",
+          "members": [
+            {
+              "name": "invalid_title"
+            },
+            {
+              "name": "creation_failed"
+            }
+          ]
+        }
+      ],
+      "surfaces": [
+        {
+          "id": "todo.surface.task_list",
+          "kind": "surface",
+          "name": "task_list",
+          "surface_kind": "view",
+          "title": "Tasks",
+          "capability": null,
+          "binds": "todo.entity.task"
+        }
+      ],
+      "tests": [
+        {
+          "id": "todo.test.task_entity_exists",
+          "kind": "test",
+          "name": "task_entity_exists",
+          "target": "todo.entity.task",
+          "description": null
+        }
+      ],
+      "workflows": [
+        {
+          "id": "todo.workflow.create_task",
+          "kind": "workflow",
+          "name": "create_task",
+          "capability": "todo.capability.task_management",
+          "authorization": [
+            {
+              "actor": "todo.actor.user",
+              "permissions": [
+                "task.create"
+              ]
+            }
+          ],
+          "writes": [
+            "todo.entity.task"
+          ],
+          "returns": [
+            {
+              "name": "ok",
+              "type": {
+                "ref": "todo.entity.task"
+              }
+            },
+            {
+              "name": "error",
+              "type": {
+                "ref": "todo.enum.task_error"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "product",
+      "to": "todo",
+      "kind": "contains"
+    },
+    {
+      "from": "todo",
+      "to": "todo.action.do_create_task",
+      "kind": "contains"
+    },
+    {
+      "from": "todo",
+      "to": "todo.actor.user",
+      "kind": "contains"
+    },
+    {
+      "from": "todo",
+      "to": "todo.capability.task_management",
+      "kind": "contains"
+    },
+    {
+      "from": "todo",
+      "to": "todo.entity.task",
+      "kind": "contains"
+    },
+    {
+      "from": "todo",
+      "to": "todo.enum.task_error",
+      "kind": "contains"
+    },
+    {
+      "from": "todo",
+      "to": "todo.surface.task_list",
+      "kind": "contains"
+    },
+    {
+      "from": "todo",
+      "to": "todo.test.task_entity_exists",
+      "kind": "contains"
+    },
+    {
+      "from": "todo",
+      "to": "todo.workflow.create_task",
+      "kind": "contains"
+    },
+    {
+      "from": "todo.action.do_create_task",
+      "to": "todo.workflow.create_task",
+      "kind": "invokes"
+    },
+    {
+      "from": "todo.surface.task_list",
+      "to": "todo.entity.task",
+      "kind": "binds"
+    },
+    {
+      "from": "todo.surface.task_list",
+      "to": "todo.action.do_create_task",
+      "kind": "exposes_action"
+    },
+    {
+      "from": "todo.test.task_entity_exists",
+      "to": "todo.entity.task",
+      "kind": "tests"
+    },
+    {
+      "from": "todo.workflow.create_task",
+      "to": "todo.capability.task_management",
+      "kind": "calls"
+    },
+    {
+      "from": "todo.workflow.create_task",
+      "to": "todo.entity.task",
+      "kind": "return_type"
+    },
+    {
+      "from": "todo.workflow.create_task",
+      "to": "todo.enum.task_error",
+      "kind": "return_type"
+    },
+    {
+      "from": "todo.workflow.create_task",
+      "to": "todo.entity.task",
+      "kind": "writes"
+    }
+  ],
+  "metadata": {
+    "compiler": "prodara-compiler",
+    "compiled_at": "2026-03-18T20:01:52.729Z",
+    "source_files": [
+      "/Users/barnatoth/Repositories/prodara/prodara-compiler/examples/minimal-todo/app.prd"
+    ]
+  }
+}

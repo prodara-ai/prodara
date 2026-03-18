@@ -1,0 +1,260 @@
+// SaaS Billing — demonstrates multi-module imports, governance,
+// constitution, runtime constructs, and cross-module references.
+// Run: npx prodara validate examples/saas-billing
+// Run: npx prodara graph examples/saas-billing
+
+product saas_billing {
+  title: "SaaS Billing"
+  version: "1.0.0"
+  modules: [identity, billing, platform]
+}
+
+// --- Identity Module ---
+
+module identity {
+
+  actor admin {
+    title: "Administrator"
+    description: "System administrator"
+  }
+
+  actor customer {
+    title: "Customer"
+    description: "Paying customer"
+  }
+
+  entity user {
+    user_id: uuid
+    email: string
+    role: user_role
+  }
+
+  enum user_role {
+    admin
+    member
+    guest
+  }
+
+}
+
+// --- Billing Module ---
+
+module billing {
+  import admin from identity
+  import customer from identity
+  import user from identity
+
+  // --- Domain Model ---
+
+  entity invoice {
+    invoice_id: uuid
+    owner: user
+    status: invoice_status
+    total: decimal
+    currency: string = "USD"
+    issued_at: datetime
+  }
+
+  entity subscription {
+    subscription_id: uuid
+    owner: user
+    plan: plan_tier
+    active: boolean = true
+    started_at: datetime
+  }
+
+  enum invoice_status {
+    draft
+    issued
+    paid
+    void
+  }
+
+  enum plan_tier {
+    free
+    starter
+    pro
+    enterprise
+  }
+
+  enum billing_error {
+    invalid_amount
+    already_paid
+    no_active_subscription
+  }
+
+  // --- Rules ---
+
+  rule invoice_total_positive {
+    entity: invoice
+    condition: total > 0
+    message: billing.billing_strings.total_positive
+  }
+
+  // --- Capabilities ---
+
+  capability invoicing {
+    title: "Invoice Management"
+    actors: [admin]
+  }
+
+  capability subscription_mgmt {
+    title: "Subscription Management"
+    actors: [admin, customer]
+  }
+
+  // --- Workflows ---
+
+  workflow create_invoice {
+    capability: invoicing
+
+    authorization {
+      admin: [invoice.create]
+    }
+
+    reads {
+      user
+      subscription
+    }
+
+    writes {
+      invoice
+    }
+
+    rules {
+      invoice_total_positive
+    }
+
+    returns {
+      ok: invoice
+      error: billing_error
+    }
+  }
+
+  workflow upgrade_subscription {
+    capability: subscription_mgmt
+
+    authorization {
+      customer: [subscription.update]
+      admin: [subscription.update]
+    }
+
+    input {
+      target_plan: plan_tier
+    }
+
+    reads {
+      subscription
+    }
+
+    writes {
+      subscription
+    }
+
+    returns {
+      ok: subscription
+      error: billing_error
+    }
+  }
+
+  // --- Actions ---
+
+  action do_create_invoice {
+    title: "Create Invoice"
+    workflow: create_invoice
+  }
+
+  action do_upgrade_subscription {
+    title: "Upgrade Subscription"
+    workflow: upgrade_subscription
+  }
+
+  // --- Strings ---
+
+  strings billing_strings {
+    total_positive: "Invoice total must be positive"
+    invoice_created: "Invoice created successfully"
+  }
+
+  // --- Surface ---
+
+  surface billing_dashboard {
+    kind: view
+    title: "Billing Dashboard"
+    binds: invoice
+    actions: [do_create_invoice]
+  }
+
+  // --- Tests ---
+
+  test invoice_exists {
+    target: invoice
+    expect { kind: "entity" }
+  }
+
+  test subscription_exists {
+    target: subscription
+    expect { kind: "entity" }
+  }
+
+}
+
+// --- Platform Module ---
+
+module platform {
+
+  constitution platform_standards {
+    description: "Platform-wide engineering policies"
+
+    policies {
+      backend {
+        framework: "node"
+        language: "typescript"
+      }
+      auth {
+        provider: "oauth2"
+        mfa: "required"
+      }
+    }
+  }
+
+  security billing_security {
+    applies_to: [billing]
+    requires: [audit_log, encryption_at_rest]
+  }
+
+  privacy customer_privacy {
+    applies_to: [identity.user]
+    classification: personal_data
+    retention: "7 years"
+    erasable: true
+  }
+
+  secret stripe_api_key {
+    description: "Stripe API key for payment processing"
+    source: vault
+    env: "STRIPE_API_KEY"
+  }
+
+  environment production {
+    url: "https://api.example.com"
+    description: "Production environment"
+    secrets {
+      stripe_key: "live"
+    }
+  }
+
+  environment staging {
+    url: "https://staging.example.com"
+    description: "Staging environment"
+    secrets {
+      stripe_key: "test"
+    }
+  }
+
+  deployment cloud {
+    description: "Cloud deployment to AWS us-east-1"
+    environments: [production, staging]
+  }
+
+}

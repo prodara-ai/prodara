@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+/* Enable class-based dark mode (for .dark toggle) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Design Tokens ──────────────────────────────────────── */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Primary palette */
+  --color-primary-50: #eef6ff;
+  --color-primary-100: #d9eaff;
+  --color-primary-200: #bcdbff;
+  --color-primary-300: #8ec5ff;
+  --color-primary-400: #59a5ff;
+  --color-primary-500: #3381ff;
+  --color-primary-600: #1b5ff5;
+  --color-primary-700: #144ae1;
+  --color-primary-800: #173cb6;
+  --color-primary-900: #19378f;
+
+  /* Accent */
+  --color-accent-400: #a78bfa;
+  --color-accent-500: #8b5cf6;
+  --color-accent-600: #7c3aed;
+
+  /* Surface (light) */
+  --color-surface-0: #ffffff;
+  --color-surface-50: #f8fafc;
+  --color-surface-100: #f1f5f9;
+  --color-surface-200: #e2e8f0;
+  --color-surface-300: #94a3b8;
+  --color-surface-400: #64748b;
+  --color-surface-500: #475569;
+  --color-surface-600: #334155;
+  --color-surface-700: #1e293b;
+  --color-surface-800: #1e293b;
+  --color-surface-900: #0f172a;
+  --color-surface-950: #020617;
+}
+
+/* ── Dark mode overrides ──────────────────────────────────── */
+.dark {
+  --color-surface-0: #0b1120;
+  --color-surface-50: #111827;
+  --color-surface-100: #1e293b;
+  --color-surface-200: #334155;
+  --color-surface-300: #475569;
+  --color-surface-400: #64748b;
+  --color-surface-500: #94a3b8;
+  --color-surface-600: #cbd5e1;
+  --color-surface-700: #e2e8f0;
+  --color-surface-800: #e2e8f0;
+  --color-surface-900: #f1f5f9;
+  --color-surface-950: #f8fafc;
+
+  --color-primary-50: rgba(25, 55, 143, 0.15);
+  --color-primary-100: rgba(27, 95, 245, 0.2);
+}
+
+/* ── Utilities ──────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-surface-0);
+  color: var(--color-surface-900);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+::selection {
+  background-color: var(--color-primary-200);
+}
+
+.dark ::selection {
+  background-color: var(--color-primary-800);
+}
+
+/* Code block scrollbar */
+pre::-webkit-scrollbar {
+  height: 6px;
+}
+pre::-webkit-scrollbar-thumb {
+  background: var(--color-surface-300);
+  border-radius: 3px;
+}
+
+/* Prose links */
+.prose a:not([class]) {
+  color: var(--color-primary-600);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose a:not([class]):hover {
+  color: var(--color-primary-700);
+}
+
+/* Prose code inline */
+.prose code:not(pre code) {
+  background-color: var(--color-surface-100);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+  color: var(--color-primary-700);
+}
+.dark .prose code:not(pre code) {
+  background-color: var(--color-surface-100);
+  color: var(--color-primary-300);
+}
+
+/* ── Syntax highlighting (fixed colors for dark code backgrounds) ── */
+.hl-base { color: #e2e8f0; }
+.hl-keyword { color: #c084fc; font-weight: 600; }
+.hl-prop { color: #93c5fd; }
+.hl-type { color: #5eead4; font-style: italic; }
+.hl-string { color: #86efac; }
+.hl-comment { color: #64748b; font-style: italic; }
+.hl-number { color: #fdba74; }
+.hl-const { color: #fbbf24; }
+.hl-punct { color: #94a3b8; }
+.hl-key { color: #93c5fd; }
+.hl-cmd { color: #86efac; font-weight: 600; }
+.hl-flag { color: #7dd3fc; }
+.hl-prompt { color: #86efac; }

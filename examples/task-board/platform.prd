@@ -1,0 +1,40 @@
+module platform {
+
+  rendering board_layout {
+    target: board.board_view
+    platform: web
+
+    layout: grid
+
+    grid {
+      columns: [1, 1, 1, 1]
+      gap: 16
+    }
+
+    placement {
+      backlog_column: {
+        column: 1
+      }
+      in_progress_column: {
+        column: 2
+      }
+      review_column: {
+        column: 3
+      }
+      done_column: {
+        column: 4
+      }
+    }
+
+    style {
+      background: design.base.color.surface_background
+      padding: design.base.spacing.md
+    }
+  }
+
+  schedule daily_archive {
+    cron: "0 0 * * *"
+    description: "Archive completed tasks older than 30 days"
+  }
+
+}

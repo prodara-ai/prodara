@@ -1,0 +1,12 @@
+// Task Board — a kanban-style project tracker.
+// Demonstrates: multi-file modules, events, workflows with branching,
+// rendering, storage, design tokens, and spec tests.
+// Run: npx prodara validate examples/task-board
+// Run: npx prodara graph examples/task-board
+// Run: npx prodara test examples/task-board
+
+product task_board {
+  title: "Task Board"
+  version: "0.1.0"
+  modules: [board, design, platform]
+}

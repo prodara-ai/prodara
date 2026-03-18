@@ -1,0 +1,9 @@
+// Contact Form — a simple lead-capture page.
+// Demonstrates: form surfaces, fields, hooks, validation
+// rules, transport, and execution configuration.
+
+product contact_form {
+  title: "Contact Form"
+  version: "0.1.0"
+  modules: [leads, platform]
+}

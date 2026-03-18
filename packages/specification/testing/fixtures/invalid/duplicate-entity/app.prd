@@ -1,0 +1,11 @@
+module billing {
+
+  entity invoice {
+    invoice_id: uuid
+  }
+
+  entity invoice {
+    name: string
+  }
+
+}

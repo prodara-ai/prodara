@@ -1,0 +1,19 @@
+// Domain model for the todo module.
+// Entities define the data the product stores and works with.
+
+module todo {
+
+  // The core domain entity — every task the user creates.
+  entity task {
+    task_id: uuid              // unique identifier
+    title: string              // what the user types
+    done: boolean = false      // starts unchecked
+  }
+
+  // Error cases that workflows can return.
+  enum task_error {
+    invalid_title
+    creation_failed
+  }
+
+}

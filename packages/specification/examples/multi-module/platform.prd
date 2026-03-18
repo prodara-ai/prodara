@@ -1,0 +1,91 @@
+/*
+  Platform module — runtime infrastructure.
+  Demonstrates: constitution, registry packages, secrets,
+  integrations, schedules, environments, and deployments.
+*/
+
+module platform {
+
+  // --- Cross-product reference ---
+
+  // References another Prodara product and consumes specific symbols.
+  // The analytics_service product must publish the consumed events.
+  product_ref analytics_service {
+    product: "analytics"
+    version: "2.0"
+
+    consumes {
+      events: [page_viewed, feature_used]
+    }
+  }
+
+  // --- Constitution ---
+
+  // Declares the technology stack (via registry packages) and
+  // product-wide policies that all modules must satisfy.
+  constitution default_product {
+    use: [
+      registry/backend/nestjs@1.1,
+      registry/database/postgres@2.0
+    ]
+
+    policies {
+      security {
+        authentication: required
+        authorization: required
+      }
+
+      testing {
+        tests_required: true
+      }
+    }
+  }
+
+  // --- Secrets and integrations ---
+
+  // A secret — the actual value is resolved at runtime, not stored in spec.
+  secret stripe_api_key {
+    source: vault
+  }
+
+  // An external integration that uses the secret for authentication.
+  integration stripe {
+    protocol: http
+
+    auth {
+      api_key: stripe_api_key
+    }
+  }
+
+  // --- Schedule ---
+
+  // A recurring schedule that can trigger workflows via "on:".
+  schedule nightly_reconciliation {
+    cron: "0 2 * * *"           // every night at 2 AM
+  }
+
+  // --- Environments ---
+
+  // Each environment resolves secrets differently.
+  environment local {
+    url: "http://localhost:3000"
+
+    secrets {
+      stripe_api_key: env.STRIPE_API_KEY   // from environment variable
+    }
+  }
+
+  environment production {
+    secrets {
+      stripe_api_key: vault.prod.stripe    // from vault
+    }
+  }
+
+  // --- Deployment ---
+
+  // Groups environments under a single deployment target.
+  deployment web_app {
+    environments: [local, production]
+  }
+
+}

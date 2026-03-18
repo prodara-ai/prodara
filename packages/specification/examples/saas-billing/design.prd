@@ -1,0 +1,37 @@
+// Design module — defines the visual language of the product.
+// Tokens are named design values; themes override them.
+
+module design {
+
+  // Base token set — the default design values.
+  tokens base {
+    color: {
+      brand_primary: "#2E6BFF"
+      surface_background: "#FFFFFF"
+      text_primary: "#111827"
+    }
+
+    spacing: {
+      sm: 8
+      md: 12
+      lg: 16
+    }
+
+    breakpoint: {
+      sm: 480
+      md: 768
+      lg: 1024
+    }
+  }
+
+  // Dark theme — extends base and overrides specific tokens.
+  theme dark {
+    extends: base
+
+    color: {
+      surface_background: "#111827"
+      text_primary: "#F9FAFB"
+    }
+  }
+
+}

@@ -1,0 +1,4 @@
+module billing {
+  import invoice from accounting
+  import invoice from archive
+}

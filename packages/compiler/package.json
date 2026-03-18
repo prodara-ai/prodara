@@ -1,0 +1,63 @@
+{
+  "name": "@prodara/compiler",
+  "version": "0.1.0",
+  "description": "The Prodara compiler — transforms .prd specification files into a validated Product Graph",
+  "author": "Prodara Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prodara-ai/prodara.git",
+    "directory": "packages/compiler"
+  },
+  "homepage": "https://github.com/prodara-ai/prodara/tree/main/packages/compiler#readme",
+  "bugs": {
+    "url": "https://github.com/prodara-ai/prodara/issues"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "prodara": "dist/cli/main.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/ test/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "prodara",
+    "compiler",
+    "specification",
+    "product-graph",
+    "declarative"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.0"
+  }
+}

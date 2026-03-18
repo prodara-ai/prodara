@@ -1,0 +1,2 @@
+Expected diagnostic category: semantic_error
+Expected message contains: approved

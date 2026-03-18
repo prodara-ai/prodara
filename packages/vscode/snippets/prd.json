@@ -1,0 +1,96 @@
+{
+  "Product Declaration": {
+    "prefix": "product",
+    "body": [
+      "product ${1:my_app} {",
+      "  title: \"${2:My App}\"",
+      "  version: \"${3:0.1.0}\"",
+      "  modules: [${4:core}]",
+      "}"
+    ],
+    "description": "Declare a product"
+  },
+  "Module Declaration": {
+    "prefix": "module",
+    "body": [
+      "module ${1:name} {",
+      "",
+      "  $0",
+      "",
+      "}"
+    ],
+    "description": "Declare a module"
+  },
+  "Entity Declaration": {
+    "prefix": "entity",
+    "body": [
+      "entity ${1:name} {",
+      "  id: uuid",
+      "  ${2:field}: ${3:string}",
+      "  created_at: datetime",
+      "}"
+    ],
+    "description": "Declare an entity with common fields"
+  },
+  "Enum Declaration": {
+    "prefix": "enum",
+    "body": [
+      "enum ${1:name} {",
+      "  ${2:value1}",
+      "  ${3:value2}",
+      "}"
+    ],
+    "description": "Declare an enum"
+  },
+  "Workflow Declaration": {
+    "prefix": "workflow",
+    "body": [
+      "workflow ${1:name} {",
+      "  input { ${2:param}: ${3:string} }",
+      "  output { ${4:result}: ${5:string} }",
+      "  steps {",
+      "    ${6:step1} -> ${7:step2}",
+      "  }",
+      "}"
+    ],
+    "description": "Declare a workflow"
+  },
+  "Screen Declaration": {
+    "prefix": "screen",
+    "body": [
+      "screen ${1:name} {",
+      "  title: \"${2:Title}\"",
+      "  sections: [${3:main}]",
+      "}"
+    ],
+    "description": "Declare a screen"
+  },
+  "Test Declaration": {
+    "prefix": "test",
+    "body": [
+      "test ${1:name} {",
+      "  target: ${2:module.entity.name}",
+      "  assert {",
+      "    ${3:has_field}: ${4:id}",
+      "  }",
+      "}"
+    ],
+    "description": "Declare a spec test"
+  },
+  "Policy Declaration": {
+    "prefix": "policy",
+    "body": [
+      "policy ${1:name} {",
+      "  ${2:rule}: ${3:value}",
+      "}"
+    ],
+    "description": "Declare a policy"
+  },
+  "Import Statement": {
+    "prefix": "import",
+    "body": [
+      "import { ${1:symbol} } from ${2:module}"
+    ],
+    "description": "Import a symbol from another module"
+  }
+}

@@ -1,0 +1,94 @@
+product invoicing {
+  title: "Invoicing"
+  version: "0.1.0"
+  modules: [billing]
+}
+
+module billing {
+
+  actor admin {
+    description: "System administrator"
+  }
+
+  actor accountant {
+    description: "Financial operator"
+  }
+
+  entity invoice {
+    invoice_id: uuid
+    status: invoice_status
+    total: decimal
+  }
+
+  enum invoice_status {
+    draft
+    issued
+    paid
+    void
+  }
+
+  enum invoice_error {
+    invalid_total
+    already_issued
+  }
+
+  strings errors {
+    invalid_total: "Invoice total must be positive"
+  }
+
+  rule positive_total {
+    entity: invoice
+    condition: total > 0
+    message: billing.errors.invalid_total
+  }
+
+  capability invoicing {
+    title: "Invoice Management"
+    actors: [admin, accountant]
+  }
+
+  workflow issue_invoice {
+    capability: invoicing
+
+    authorization {
+      admin: [invoice.issue]
+      accountant: [invoice.issue]
+    }
+
+    reads { invoice }
+    writes { invoice }
+    rules { positive_total }
+    transitions { invoice.status: draft -> issued }
+
+    returns {
+      ok: invoice
+      error: invoice_error
+    }
+  }
+
+  workflow void_invoice {
+    capability: invoicing
+
+    authorization {
+      admin: [invoice.void]
+    }
+
+    reads { invoice }
+    writes { invoice }
+    transitions { invoice.status: issued -> void }
+
+    returns {
+      ok: invoice
+      error: invoice_error
+    }
+  }
+
+  action issue_invoice {
+    workflow: issue_invoice
+  }
+
+  action void_invoice {
+    workflow: void_invoice
+  }
+
+}

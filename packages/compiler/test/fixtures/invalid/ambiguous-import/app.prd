@@ -1,0 +1,12 @@
+module accounting {
+  entity invoice { id: uuid }
+}
+
+module archive {
+  entity invoice { id: uuid }
+}
+
+module billing {
+  import invoice from accounting
+  import invoice from archive
+}

@@ -1,0 +1,142 @@
+/*
+  Billing module — the core domain of this product.
+  Demonstrates: imports, value objects, entities, enums,
+  rules with expressions, workflows, actions, localized strings,
+  and surfaces that reference string keys.
+*/
+
+module billing {
+
+  // Import the customer entity from the crm module.
+  // This avoids redefining customer here.
+  import customer from crm
+
+  // --- Actors ---
+
+  actor accountant {
+    title: "Accountant"
+    description: "Internal finance operator"
+  }
+
+  actor admin {
+    title: "Administrator"
+    description: "Full system access"
+  }
+
+  // --- Capability ---
+
+  // Groups invoicing-related behavior under one business label.
+  capability invoicing {
+    title: "Invoicing"
+    actors: [accountant, admin]
+  }
+
+  // --- Domain model ---
+
+  // Invoice lifecycle states.
+  enum invoice_status {
+    draft
+    issued
+    paid
+  }
+
+  // Error cases returned by invoice workflows.
+  enum invoice_error {
+    invalid_customer
+    invalid_total
+    creation_failed
+  }
+
+  // A value object — immutable, no identity of its own.
+  value money {
+    amount: decimal
+    currency: string
+  }
+
+  // The core domain entity.
+  entity invoice {
+    invoice_id: uuid
+    customer: customer           // references the imported crm.customer
+    total: money                 // value object as a field type
+    status: invoice_status = draft
+  }
+
+  // --- Rules ---
+
+  // A rule declares a condition that must hold.
+  // The compiler validates expression types (see type-system.md).
+  rule invoice_total_positive {
+    entity: invoice
+    condition: total.amount > 0 and status == draft
+    message: billing.invoice_strings.total_must_be_positive
+  }
+
+  // --- Workflow ---
+
+  workflow create_invoice {
+    capability: invoicing
+
+    authorization {
+      accountant: [invoice.create]
+      admin: [invoice.create]
+    }
+
+    input {
+      customer: customer         // who the invoice is for
+      amount: money              // how much
+    }
+
+    writes {
+      invoice
+    }
+
+    rules {
+      invoice_total_positive
+    }
+
+    transitions {
+      invoice.status: draft -> issued
+    }
+
+    effects {
+      audit "Invoice created"
+    }
+
+    returns {
+      ok: invoice
+      error: invoice_error
+    }
+  }
+
+  // --- Action ---
+
+  // Surfaces reference actions; actions reference workflows.
+  action create_invoice {
+    title: "Create Invoice"
+    workflow: create_invoice
+  }
+
+  // --- Localized strings ---
+
+  // When a product needs to support multiple languages,
+  // surface titles and rule messages reference string keys.
+  strings invoice_strings {
+    invoice_list_title: "Invoices"
+    total_must_be_positive: "Invoice total must be positive"
+  }
+
+  // --- Surface ---
+
+  // A view surface with a localized title (references a strings key).
+  surface invoice_list {
+    kind: view
+    title: billing.invoice_strings.invoice_list_title
+    binds: invoice
+    actions: [create_invoice]
+
+    hooks {
+      load: create_invoice       // lifecycle hook — triggers on surface load
+    }
+  }
+
+}

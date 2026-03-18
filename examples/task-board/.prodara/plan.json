@@ -1,0 +1,259 @@
+{
+  "format": "prodara-plan",
+  "version": "0.1.0",
+  "changes": [
+    {
+      "nodeId": "board",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.action.do_move_task",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.actor.lead",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.actor.member",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.capability.task_tracking",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.entity.task",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.enum.move_error",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.enum.priority",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.enum.task_status",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.event.task_completed",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.event.task_moved",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.rule.task_must_have_title",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.storage.task_storage",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.strings.board_strings",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.surface.board_view",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.test.move_task_workflow_exists",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.test.task_entity_exists",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.workflow.move_task",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "board.workflow.notify_completion",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "design",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "design.tokens.base",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "platform",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "platform.rendering.board_layout",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "platform.schedule.daily_archive",
+      "changeKind": "added"
+    },
+    {
+      "nodeId": "product",
+      "changeKind": "added"
+    }
+  ],
+  "impacts": [],
+  "tasks": [
+    {
+      "taskId": "task-0001",
+      "action": "generate",
+      "nodeId": "product",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0002",
+      "action": "generate",
+      "nodeId": "board",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0003",
+      "action": "generate",
+      "nodeId": "board.action.do_move_task",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0004",
+      "action": "generate",
+      "nodeId": "board.actor.lead",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0005",
+      "action": "generate",
+      "nodeId": "board.actor.member",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0006",
+      "action": "generate",
+      "nodeId": "board.capability.task_tracking",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0007",
+      "action": "generate",
+      "nodeId": "board.entity.task",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0008",
+      "action": "generate",
+      "nodeId": "board.enum.move_error",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0009",
+      "action": "generate",
+      "nodeId": "board.enum.priority",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0010",
+      "action": "generate",
+      "nodeId": "board.enum.task_status",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0011",
+      "action": "generate",
+      "nodeId": "board.event.task_completed",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0012",
+      "action": "generate",
+      "nodeId": "board.event.task_moved",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0013",
+      "action": "generate",
+      "nodeId": "board.rule.task_must_have_title",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0014",
+      "action": "generate",
+      "nodeId": "board.storage.task_storage",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0015",
+      "action": "generate",
+      "nodeId": "board.strings.board_strings",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0016",
+      "action": "generate",
+      "nodeId": "board.surface.board_view",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0017",
+      "action": "generate",
+      "nodeId": "board.test.move_task_workflow_exists",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0018",
+      "action": "generate",
+      "nodeId": "board.test.task_entity_exists",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0019",
+      "action": "generate",
+      "nodeId": "board.workflow.move_task",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0020",
+      "action": "generate",
+      "nodeId": "board.workflow.notify_completion",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0021",
+      "action": "generate",
+      "nodeId": "design",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0022",
+      "action": "generate",
+      "nodeId": "design.tokens.base",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0023",
+      "action": "generate",
+      "nodeId": "platform",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0024",
+      "action": "generate",
+      "nodeId": "platform.rendering.board_layout",
+      "reason": "initial build"
+    },
+    {
+      "taskId": "task-0025",
+      "action": "generate",
+      "nodeId": "platform.schedule.daily_archive",
+      "reason": "initial build"
+    }
+  ]
+}

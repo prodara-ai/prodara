@@ -1,0 +1,13 @@
+product sample {
+  title: "Sample"
+  version: "0.1.0"
+  modules: [sample]
+}
+
+module sample {
+
+  entity task {
+    task_id: uuid
+  }
+
+}
