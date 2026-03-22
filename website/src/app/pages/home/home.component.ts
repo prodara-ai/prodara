@@ -20,9 +20,9 @@ import { CodeBlockComponent } from '../../components/code-block.component';
             <span class="bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">Specification Ecosystem</span>
           </h1>
           <p class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-surface-600 sm:text-xl">
-            Describe your product in plain English-like specs. Prodara's compiler validates everything,
-            and your AI coding agent turns it into production-ready code - <strong class="text-surface-900">with governance,
-            testing, and incremental builds built in</strong>.
+            Describe your product in plain English-like specs. Your AI agent validates, compiles, and
+            implements everything — <strong class="text-surface-900">driven by agent prompts, slash commands,
+            and skills built into every Prodara project</strong>.
           </p>
           <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
@@ -43,7 +43,7 @@ import { CodeBlockComponent } from '../../components/code-block.component';
           <!-- Install command -->
           <div class="mx-auto mt-8 flex max-w-md items-center gap-3 rounded-xl border border-surface-200 bg-surface-950 px-4 py-3 dark:border-surface-200 dark:bg-surface-100">
             <code class="font-mono text-sm text-green-400 dark:text-green-600">$</code>
-            <code class="font-mono text-sm text-surface-300 dark:text-surface-600">npm install -g &#64;prodara/cli</code>
+            <code class="font-mono text-sm text-surface-300 dark:text-surface-600">prodara init my-app --template saas</code>
             <button
               (click)="copyInstall()"
               class="ml-auto rounded p-1 text-surface-400 hover:text-white dark:hover:text-surface-900 transition"
@@ -267,7 +267,7 @@ import { CodeBlockComponent } from '../../components/code-block.component';
           Ready to build specs that actually compile?
         </h2>
         <p class="mt-4 text-lg text-primary-100">
-          Install the VS Code extension, point your AI agent at a template, and get your first Product Graph in minutes.
+          Run <code class="rounded bg-white/20 px-2 py-0.5 text-sm font-mono">prodara init</code>, open the project in VS Code, and let your AI agent build the rest.
         </p>
         <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <a
@@ -411,8 +411,8 @@ module todo {
     },
     {
       icon: '&#x1F916;',
-      title: 'AI Agent Workflows',
-      desc: '26+ supported agents with 29 slash commands, 5 interactive modes, and structured JSON output. Built to be driven by GitHub Copilot, Claude, Cursor, or any AI coding agent.',
+      title: 'Agent-First Build System',
+      desc: 'Your AI agent is the primary builder. prodara init generates agent prompts, slash commands, and skills. 26+ agents supported — Copilot, Claude, Cursor, and more.',
     },
   ];
 
@@ -420,40 +420,40 @@ module todo {
     { title: 'Syntax Highlighting', desc: 'Rich semantic coloring for .prd files - keywords, types, identifiers, and string literals with a dedicated TextMate grammar.' },
     { title: 'Real-Time Diagnostics', desc: 'See compiler errors and warnings inline as you type, powered by the Prodara Language Server with 300ms debounced validation.' },
     { title: 'Smart Completions', desc: 'Context-aware autocomplete for all PRD keywords, type names, and cross-module references - triggered on "." and ":" characters.' },
-    { title: 'Agent-Friendly', desc: 'Your AI coding agent (Copilot, Claude, Cursor, etc.) writes .prd files directly in VS Code with full LSP support, go-to-definition, and hover info.' },
-    { title: 'One-Click Compile', desc: 'Build, validate, view the Product Graph, and show the incremental plan - all from VS Code commands.' },
+    { title: 'Agent-Driven Building', desc: 'Your AI agent uses the generated prompts and slash commands to validate, compile, and implement — all without leaving the editor.' },
+    { title: 'Prompt & Slash Commands', desc: 'prodara init generates agent-specific prompts and 29 slash commands. Build, review, plan, and implement via your preferred AI agent.' },
   ];
 
   readonly howItWorks = [
     {
       num: '1',
-      title: 'Describe Your Product',
-      desc: 'Use the VS Code extension and your AI agent to write .prd specs. Describe entities, workflows, surfaces, governance, and more - or let your agent write it from a prompt. The init command auto-installs everything you need.',
-      cmd: 'prodara init --template minimal',
+      title: 'Initialize Your Project',
+      desc: 'Run prodara init to scaffold a project with .prd spec files, agent prompts, and slash commands. The CLI auto-installs the compiler and generates everything your AI agent needs.',
+      cmd: 'prodara init my-app --template saas',
     },
     {
       num: '2',
-      title: 'Build & Implement',
-      desc: 'The compiler validates your spec through 13 phases, then dispatches implementation tasks to your AI agent. In headless mode, agents build directly via API - no UI needed. Use --dry-run to preview tasks.',
-      cmd: 'prodara build .',
+      title: 'Let Your Agent Build',
+      desc: 'Open the project in VS Code and use the Prodara build prompt or /prodara:build slash command. Your AI agent validates, compiles, plans, and implements — all driven by the generated prompts.',
+      cmd: 'Use: @prodara-build in Copilot Chat',
     },
     {
       num: '3',
       title: 'Iterate & Ship',
-      desc: 'Change the spec, rebuild, and see exactly what changed with semantic diffing and impact propagation. 9 built-in reviewers catch issues before they reach code.',
-      cmd: 'prodara plan --format json .',
+      desc: 'Change the spec, ask your agent to rebuild, and see exactly what changed with semantic diffing. 9 built-in reviewers catch issues before they reach code.',
+      cmd: 'Use: /prodara:diff or /prodara:review',
     },
   ];
 
   readonly newUserReasons = [
-    { title: 'You don\'t need to learn the language', desc: 'Your AI agent (Copilot, Claude, Cursor) writes the .prd specs for you. Focus on what your product does, not syntax.' },
+    { title: 'Your agent does the building', desc: 'Run prodara init, open in VS Code, and use the generated agent prompts. Your AI agent writes specs, compiles, and implements — you focus on what the product should do.' },
     { title: 'Real compiler, real errors', desc: 'Not a linter on top of markdown - a full lexer/parser/binder/type-checker that catches mistakes before they reach code. 900+ stable error codes.' },
     { title: 'VS Code extension included', desc: 'Install the extension and get syntax highlighting, inline diagnostics, completions, go-to-definition, and hover info from day one.' },
     { title: 'Spec-native testing', desc: 'Write expect blocks right inside your spec. Test transitions, authorization, validation rules, and return types - directly against the Product Graph.' },
   ];
 
   readonly agentUserReasons = [
-    { title: 'Deterministic builds', desc: 'Same spec always produces the same Product Graph. No hallucinated drift between runs - verified by SHA-256 hashing.' },
+    { title: 'Agent prompts out of the box', desc: 'prodara init generates .prompt.md files, slash commands, and copilot-instructions.md. Your agent knows how to build from the moment you open the project.' },
     { title: 'Compiler-validated specs', desc: 'A full 13-phase compiler catches mistakes before they reach generated code. Suggested fixes let agents self-correct in a loop.' },
     { title: 'Semantic diffing & impact analysis', desc: 'When you change a spec, Prodara traces 40+ edge types to tell you exactly which downstream artifacts need updating - with depth tracking.' },
     { title: 'Governance as code', desc: 'Constitutions enforce security, privacy, and compliance policies. 9 built-in reviewers plus custom reviewers catch issues automatically.' },
@@ -468,6 +468,6 @@ module todo {
   ];
 
   copyInstall(): void {
-    navigator.clipboard.writeText('npm install -g @prodara/cli');
+    navigator.clipboard.writeText('prodara init my-app --template saas');
   }
 }

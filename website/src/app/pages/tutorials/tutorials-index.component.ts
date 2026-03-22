@@ -8,8 +8,8 @@ import { RouterLink } from '@angular/router';
     <div class="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
       <h1 class="text-3xl font-bold tracking-tight text-surface-950">Tutorials</h1>
       <p class="mt-4 text-lg text-surface-600">
-        Learn Prodara step by step - from installing the VS Code extension and setting up your AI agent,
-        to building complex multi-module products.
+        Learn Prodara step by step — from initializing your project and letting your AI agent build,
+        to advanced multi-module products and custom governance.
       </p>
 
       <div class="mt-12 grid gap-6 sm:grid-cols-2">
@@ -22,8 +22,8 @@ import { RouterLink } from '@angular/router';
           </div>
           <h2 class="text-xl font-semibold text-surface-950 group-hover:text-primary-600">Quick Start</h2>
           <p class="mt-2 text-sm text-surface-600">
-            Install the VS Code extension, set up the CLI, create a project, and let your AI agent
-            write your first spec. No Prodara syntax knowledge required.
+            Run <code>prodara init</code>, open in VS Code, and let your AI agent build your first project.
+            Agent prompts and slash commands are generated automatically — no Prodara syntax knowledge required.
           </p>
           <div class="mt-4 flex items-center gap-2 text-sm font-medium text-primary-600">
             Start tutorial

@@ -2,7 +2,7 @@
   <a href="https://www.prodara.net" target="blank"><img src="assets/logo/logo-vertical.png" width="320" alt="Prodara Logo" /></a>
 </p>
 
-<p align="center">The specification-driven product engineering system.<br/>Define your product in <code>.prd</code> files. Compile to a validated Product Graph and let AI agents build it.</p>
+<p align="center">The AI-native product engineering system.<br/>Run <code>prodara init</code>, open in VS Code, and let your AI agent build the rest.</p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@prodara/cli"><img src="https://img.shields.io/npm/v/@prodara/cli.svg" alt="NPM Version" /></a>
@@ -17,12 +17,14 @@
 
 Prodara is a **local-first, AI-native product engineering system**. You describe your product in `.prd` specification files — entities, workflows, surfaces, governance, security — and the Prodara compiler turns that specification into a **validated Product Graph**: a deterministic, machine-readable blueprint that any AI agent can consume.
 
+**The primary workflow**: Run `prodara init` to scaffold a project with agent prompts, slash commands, and copilot-instructions. Then open the project in VS Code and let your AI agent handle the build — validation, compilation, and implementation are all driven by the generated prompts.
+
 **For product teams**: Write what your product should do in structured plain text. The compiler catches inconsistencies, missing rules, and broken relationships before any code is written.
 
 **For AI agents**: Get a reproducible JSON graph with 42 edge types, incremental plans, and deterministic builds. No hallucination of requirements — the spec is the single source of truth.
 
 ```
-.prd specification → Compiler (13 phases) → Product Graph → AI agents build it
+prodara init → AI agent uses generated prompts → Compiler validates → Agent implements
 ```
 
 ## Quick Start
@@ -31,11 +33,17 @@ Prodara is a **local-first, AI-native product engineering system**. You describe
 # Install the global CLI
 npm install -g @prodara/cli
 
-# Create a project (auto-installs @prodara/compiler locally)
+# Create a project (auto-installs compiler + generates agent prompts)
 prodara init my-product --template saas
 cd my-product
 
-# Build: validate → graph → plan → workflow → implement → review → verify
+# Open in VS Code — agent prompts and slash commands are ready
+code .
+
+# Your AI agent builds using the generated prompts:
+#   @prodara-build in Copilot Chat
+#   /prodara:build slash command
+#   or run directly:
 prodara build
 prodara build --dry-run    # Preview implementation tasks without executing
 
@@ -47,7 +55,7 @@ prodara test              # Run spec tests
 prodara diff              # Show semantic changes
 ```
 
-> `prodara init` automatically runs `npm init` (if needed) and installs `@prodara/compiler` as a dev dependency. Use `--skip-install` to skip this step.
+> `prodara init` automatically runs `npm init` (if needed), installs `@prodara/compiler` as a dev dependency, and generates `.github/prompts/`, `.github/copilot-instructions.md`, and agent-specific slash commands. Use `--skip-install` to skip npm setup, or `--ai <agent>` to target a specific AI platform.
 
 ## Table of Contents
 
@@ -265,30 +273,27 @@ prodara preset remove <name>        # Remove preset
 
 ## AI Agent Integration
 
-Prodara is built for AI agents. Every command produces deterministic, machine-readable output:
+Prodara is built for AI agents. The `prodara init` command generates everything your agent needs:
+
+- **Agent prompts** (`.github/prompts/prodara-build.prompt.md`) — the primary build workflow
+- **Copilot instructions** (`.github/copilot-instructions.md`) — project-level context for Copilot
+- **29 slash commands** — Build, validate, plan, implement, review, explore, and more
+
+This is the recommended workflow — your AI agent drives the entire build process:
 
 ```bash
-# Any agent can drive the full pipeline
-prodara build --format json ./my-project
+# Initialize with agent support (Copilot is the default)
+prodara init my-product --template saas
 
-# Or consume individual artifacts
-prodara graph --format json ./my-project    # → Product Graph JSON
-prodara plan --format json ./my-project     # → Incremental plan JSON
-prodara diff --format json ./my-project     # → Semantic diff JSON
-```
-
-### 26 Supported AI Platforms
-
-Generate platform-specific slash command files with a single command:
-
-```bash
-prodara init --ai copilot     # GitHub Copilot
-prodara init --ai claude      # Anthropic Claude
-prodara init --ai cursor      # Cursor IDE
-prodara init --ai gemini      # Google Gemini
-prodara init --ai windsurf    # Windsurf IDE
+# Or target a specific AI platform
+prodara init --ai claude       # Anthropic Claude
+prodara init --ai cursor       # Cursor IDE
+prodara init --ai gemini       # Google Gemini
+prodara init --ai windsurf     # Windsurf IDE
 # ... and 21 more platforms
 ```
+
+Once initialized, open the project in VS Code and build via agent:
 
 ### 29 Slash Commands
 
@@ -303,10 +308,18 @@ AI agents get 29 commands organized by workflow:
 
 ### Design Principles for Agents
 
+- **Agent-first** — `prodara init` generates prompts, skills, and slash commands; the agent drives the build
 - **Deterministic** — Same `.prd` input always produces the same graph output
 - **Machine-readable** — JSON output for every command, structured diagnostics
 - **No interactive input** — Fully headless; agents drive via CLI or API
 - **Stable exit codes** — `0` success, `1` errors; diagnostics on stderr, data on stdout
+
+> The CLI is also available directly for CI/CD pipelines and automation:
+> ```bash
+> prodara build --format json ./my-project
+> prodara graph --format json ./my-project    # → Product Graph JSON
+> prodara plan --format json ./my-project     # → Incremental plan JSON
+> ```
 
 See [docs/agent-integration.md](docs/agent-integration.md) for the full orchestration contract.
 
@@ -484,6 +497,10 @@ npm run clean           # Remove dist/ directories
 
 ```
 prodara/
+├── .github/
+│   ├── copilot-instructions.md  # Project-level agent instructions
+│   ├── prompts/                 # Agent prompt files (.prompt.md)
+│   └── workflows/               # CI/CD (deploy, test)
 ├── packages/
 │   ├── compiler/          # @prodara/compiler — core compiler + CLI + API
 │   │   ├── src/

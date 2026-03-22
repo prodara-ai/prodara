@@ -12,7 +12,7 @@ npm install @prodara/compiler
 
 ## Overview
 
-The compiler takes `.prd` specification files through a 15-phase pipeline:
+The compiler takes `.prd` specification files through a 13-phase pipeline:
 
 1. **Discovery** → **Lexing** → **Parsing** → **Binding** → **Type Checking** → **Semantic Validation**
 2. **Graph Building** → **Graph Validation** → **Constitution Resolution**
@@ -21,7 +21,9 @@ The compiler takes `.prd` specification files through a 15-phase pipeline:
 
 ### Implementation Phase
 
-The `prodara build` command runs the full pipeline including AI-driven implementation. The implement phase:
+The primary way to build is through your AI agent — `prodara init` generates agent prompts
+(`.github/prompts/prodara-build.prompt.md`), slash commands, and copilot-instructions that
+drive the full build pipeline. The agent uses `prodara build` under the hood. The implement phase:
 
 - Extracts implementation instructions from the workflow engine
 - Dispatches each task to an AI agent with a structured prompt containing task ID, action, node context, related edges, and product graph data

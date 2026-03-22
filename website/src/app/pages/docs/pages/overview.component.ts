@@ -29,7 +29,7 @@ import { RouterLink } from '@angular/router';
             <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-100 text-sm dark:bg-primary-900/30">⚙️</div>
             <div>
               <p class="text-sm font-medium text-surface-950">Compiler &amp; CLI</p>
-              <p class="text-xs text-surface-500">15-phase pipeline with JSON output</p>
+              <p class="text-xs text-surface-500">13-phase pipeline with JSON output</p>
             </div>
           </div>
           <div class="flex gap-3">
@@ -93,17 +93,17 @@ import { RouterLink } from '@angular/router';
       <p class="text-surface-600">
         New to Prodara? Start with the
         <a routerLink="/tutorials/quick-start" class="text-primary-600 hover:underline">Quick Start tutorial</a>
-        - install the VS Code extension, set up your AI agent, and compile your first spec.
+        — run <code>prodara init</code>, open in VS Code, and let your AI agent handle the build.
         Or explore the
         <a routerLink="/docs/architecture" class="text-primary-600 hover:underline">Architecture guide</a>
-        to understand the 15-phase compiler pipeline.
+        to understand the 13-phase compiler pipeline.
       </p>
     </article>
   `,
 })
 export class DocsOverviewComponent {
   readonly cards = [
-    { path: '/docs/architecture', title: 'Architecture', desc: 'The 15-phase compiler pipeline, from source discovery to build orchestration.' },
+    { path: '/docs/architecture', title: 'Architecture', desc: 'The 13-phase compiler pipeline, from source discovery to build orchestration.' },
     { path: '/docs/configuration', title: 'Configuration', desc: 'Configure the compiler, reviewers, workflows, and more via prodara.config.json.' },
     { path: '/docs/product-graph', title: 'Product Graph', desc: 'The canonical JSON output with 40+ typed edge relationships.' },
     { path: '/docs/diagnostics', title: 'Diagnostics', desc: 'Structured error codes, severities, and suggested fixes.' },
