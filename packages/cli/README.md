@@ -19,6 +19,9 @@ This ensures you always run the compiler version pinned in your project's `packa
 ## Usage
 
 ```bash
+# Create a new project — automatically installs @prodara/compiler
+prodara init my-project
+
 # In a project with @prodara/compiler installed locally
 prodara build
 prodara validate
@@ -27,6 +30,16 @@ prodara plan
 prodara test
 prodara doctor
 ```
+
+### Automatic Setup
+
+`prodara init` handles project setup automatically:
+
+1. Runs `npm init -y` if no `package.json` exists
+2. Installs `@prodara/compiler` as a dev dependency
+3. Scaffolds the `.prd` project structure
+
+Use `--skip-install` to skip the npm init and compiler installation steps.
 
 If no local compiler is found, the CLI prints installation instructions.
 

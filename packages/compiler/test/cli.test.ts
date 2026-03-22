@@ -67,6 +67,11 @@ const mockListSupportedAgents = vi.fn();
 const mockGenerateSlashCommands = vi.fn();
 const mockWriteSlashCommands = vi.fn();
 const mockGetAgentConfig = vi.fn();
+const mockExecSync = vi.fn();
+
+vi.mock('node:child_process', () => ({
+  execSync: (...args: unknown[]) => mockExecSync(...args),
+}));
 
 vi.mock('../src/cli/compile.js', () => ({
   compile: (...args: unknown[]) => mockCompile(...args),
@@ -530,6 +535,96 @@ describe('init command', () => {
     try {
       const program = createProgram();
       await runCommand(program, ['init', tmpDir, '--name', 'test_app']);
+      expect(stdoutOutput).toContain('Initialized');
+      expect(process.exitCode).toBe(0);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('runs npm init when package.json is missing', async () => {
+    const { mkdtempSync, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      const program = createProgram();
+      await runCommand(program, ['init', tmpDir, '--name', 'test_app']);
+      expect(mockExecSync).toHaveBeenCalledWith('npm init -y', expect.objectContaining({ cwd: expect.stringContaining(tmpDir) }));
+      expect(stdoutOutput).toContain('Initializing npm project');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('installs @prodara/compiler as dev dependency', async () => {
+    const { mkdtempSync, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      const program = createProgram();
+      await runCommand(program, ['init', tmpDir, '--name', 'test_app']);
+      expect(mockExecSync).toHaveBeenCalledWith('npm install --save-dev @prodara/compiler', expect.objectContaining({ cwd: expect.stringContaining(tmpDir) }));
+      expect(stdoutOutput).toContain('Installing @prodara/compiler');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('skips npm init when package.json already exists', async () => {
+    const { mkdtempSync, writeFileSync: fsWrite, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsWrite(join(tmpDir, 'package.json'), '{}', 'utf-8');
+      const program = createProgram();
+      await runCommand(program, ['init', tmpDir, '--name', 'test_app']);
+      expect(mockExecSync).not.toHaveBeenCalledWith('npm init -y', expect.anything());
+      expect(mockExecSync).toHaveBeenCalledWith('npm install --save-dev @prodara/compiler', expect.anything());
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('skips install with --skip-install flag', async () => {
+    const { mkdtempSync, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      const program = createProgram();
+      await runCommand(program, ['init', tmpDir, '--name', 'test_app', '--skip-install']);
+      expect(mockExecSync).not.toHaveBeenCalled();
+      expect(stdoutOutput).toContain('Initialized');
+      expect(process.exitCode).toBe(0);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('exits 1 when npm init fails', async () => {
+    const { mkdtempSync, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    mockExecSync.mockImplementationOnce(() => { throw new Error('npm init failed'); });
+    try {
+      const program = createProgram();
+      await runCommand(program, ['init', tmpDir, '--name', 'test_app']);
+      expect(stderrOutput).toContain('Failed to initialize npm project');
+      expect(process.exitCode).toBe(1);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('warns but continues when compiler install fails', async () => {
+    const { mkdtempSync, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    // npm init succeeds, npm install fails
+    mockExecSync.mockImplementationOnce(() => {}).mockImplementationOnce(() => { throw new Error('install failed'); });
+    try {
+      const program = createProgram();
+      await runCommand(program, ['init', tmpDir, '--name', 'test_app']);
+      expect(stderrOutput).toContain('Failed to install @prodara/compiler');
       expect(stdoutOutput).toContain('Initialized');
       expect(process.exitCode).toBe(0);
     } finally {

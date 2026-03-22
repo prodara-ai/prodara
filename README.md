@@ -28,15 +28,14 @@ Prodara is a **local-first, AI-native product engineering system**. You describe
 ## Quick Start
 
 ```bash
-# Install
+# Install the global CLI
 npm install -g @prodara/cli
-npm install @prodara/compiler
 
-# Create a project
+# Create a project (auto-installs @prodara/compiler locally)
 prodara init my-product --template saas
 cd my-product
 
-# Build: validate → graph → plan → workflow → review → verify
+# Build: validate → graph → plan → workflow → implement → review → verify
 prodara build
 
 # Or run individual phases
@@ -46,6 +45,8 @@ prodara plan              # Generate incremental plan
 prodara test              # Run spec tests
 prodara diff              # Show semantic changes
 ```
+
+> `prodara init` automatically runs `npm init` (if needed) and installs `@prodara/compiler` as a dev dependency. Use `--skip-install` to skip this step.
 
 ## Table of Contents
 
@@ -220,7 +221,9 @@ prodara watch [path]       # Watch mode — recompile on change
 ### Project Management
 
 ```bash
-prodara init [name]                # Scaffold project (--template saas|minimal|marketplace|internal-tool|api)
+prodara init [name]                # Scaffold project (auto-installs compiler)
+prodara init --template saas       # Use a starter template
+prodara init --skip-install        # Skip npm init and compiler installation
 prodara init --ai copilot          # Generate slash commands for an AI agent
 prodara propose "Add payments"     # Create change proposal
 prodara changes                    # List active proposals

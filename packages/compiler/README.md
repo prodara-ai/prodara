@@ -8,6 +8,8 @@ The core compilation engine, workflow orchestrator, and programmatic API for the
 npm install @prodara/compiler
 ```
 
+> **Tip**: `prodara init` installs this package automatically. No separate install step needed.
+
 ## Overview
 
 The compiler takes `.prd` specification files through a 15-phase pipeline:
@@ -16,6 +18,18 @@ The compiler takes `.prd` specification files through a 15-phase pipeline:
 2. **Graph Building** → **Graph Validation** → **Constitution Resolution**
 3. **Diffing** → **Impact Propagation** → **Planning**
 4. **Incremental Spec** → **Workflow Engine** → **Review/Fix Loop** → **Verification**
+
+### Implementation Phase
+
+The `prodara build` command runs the full pipeline including AI-driven implementation. The implement phase:
+
+- Extracts implementation instructions from the workflow engine
+- Dispatches each task to an AI agent with a structured prompt containing task ID, action, node context, related edges, and product graph data
+- Supports two modes:
+  - **Prompt files** (default) — Generates `.md` prompt files for IDE-based agents (Copilot, Claude, Cursor, etc.)
+  - **Headless** (`--headless`) — Sends prompts directly via API to OpenAI, Anthropic, or other providers
+
+Use `--no-implement` to skip the implementation phase.
 
 ## Programmatic API
 
@@ -185,7 +199,11 @@ Each workflow defines its phase sequence and optional `reviewBefore`/`reviewAfte
 When installed as a project dependency, provides a local `prodara` binary:
 
 ```bash
-npx prodara build
+npx prodara init                       # Scaffold project (auto-installs compiler)
+npx prodara init --skip-install        # Scaffold without npm setup
+npx prodara build                      # Full pipeline including AI implementation
+npx prodara build --headless           # Use API driver instead of prompt files
+npx prodara build --no-implement       # Skip implementation phase
 npx prodara validate --format json
 npx prodara graph --output build/graph.json
 npx prodara test

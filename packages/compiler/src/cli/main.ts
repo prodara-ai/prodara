@@ -7,6 +7,7 @@ import { Command } from 'commander';
 import { readFileSync, writeFileSync, mkdirSync, existsSync, watch } from 'node:fs';
 import { resolve, dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execSync } from 'node:child_process';
 import { compile } from './compile.js';
 import { createBuildSummary, formatBuildSummary } from '../orchestrator/orchestrator.js';
 import { runPipeline } from '../orchestrator/pipeline.js';
@@ -150,7 +151,8 @@ program
   .option('--template <template>', 'Starter template: minimal | saas | marketplace | internal-tool | api')
   .option('--ai <agent>', 'Configure AI agent slash commands (e.g. copilot, claude, cursor)')
   .option('--ai-commands-dir <dir>', 'Custom directory for slash commands (use with --ai generic)')
-  .action((path: string, opts: { name: string; template?: string; ai?: string; aiCommandsDir?: string }) => {
+  .option('--skip-install', 'Skip automatic npm init and compiler installation')
+  .action((path: string, opts: { name: string; template?: string; ai?: string; aiCommandsDir?: string; skipInstall?: boolean }) => {
     const root = resolve(path);
     const appPrd = join(root, 'app.prd');
     const configFile = join(root, CONFIG_FILENAME);
@@ -163,6 +165,32 @@ program
     }
 
     mkdirSync(root, { recursive: true });
+
+    // Ensure npm is initialized and compiler is installed
+    if (!opts.skipInstall) {
+      const pkgJsonPath = join(root, 'package.json');
+      if (!existsSync(pkgJsonPath)) {
+        process.stdout.write('Initializing npm project...\n');
+        try {
+          execSync('npm init -y', { cwd: root, stdio: 'pipe' });
+          process.stdout.write('  Created package.json\n');
+        } catch {
+          process.stderr.write('Error: Failed to initialize npm project. Run `npm init` manually.\n');
+          process.exitCode = 1;
+          return;
+        }
+      }
+
+      process.stdout.write('Installing @prodara/compiler...\n');
+      try {
+        execSync('npm install --save-dev @prodara/compiler', { cwd: root, stdio: 'pipe' });
+        process.stdout.write('  Installed @prodara/compiler\n');
+      } catch {
+        process.stderr.write('Warning: Failed to install @prodara/compiler. Install it manually:\n');
+        process.stderr.write('  npm install --save-dev @prodara/compiler\n');
+      }
+    }
+
     mkdirSync(prodaraDir, { recursive: true });
     mkdirSync(join(prodaraDir, 'runs'), { recursive: true });
     mkdirSync(join(prodaraDir, 'reviewers'), { recursive: true });

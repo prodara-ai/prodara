@@ -37,6 +37,7 @@ import type { ValidationResult } from '../validation/types.js';
 import type { SpecTestSuiteResult } from '../testing/test-runner.js';
 import type { ConstitutionResolutionResult } from '../registry/resolution.js';
 import type { BuildStatus } from './types.js';
+import type { AgentResponse } from '../agent/types.js';
 
 import { compile } from '../cli/compile.js';
 import type { CompileResult } from '../cli/compile.js';
@@ -48,6 +49,9 @@ import { DEFAULT_REVIEWERS, runReviewFixLoop } from '../reviewers/index.js';
 import { verify } from '../verification/verify.js';
 import { createAuditRecord, writeAuditRecord } from '../audit/audit.js';
 import { generateDocs, writeDocs } from '../doc-gen/index.js';
+import { createDriver } from '../agent/agent.js';
+import { createApiDriver } from '../agent/api-client.js';
+import type { ApiClientConfig } from '../agent/api-client.js';
 
 // ---------------------------------------------------------------------------
 // Phase definitions
@@ -107,6 +111,7 @@ interface PipelineState {
   reviewCycles: readonly ReviewCycleResult[] | null;
   preReviewCycles: readonly ReviewCycleResult[] | null;
   verification: VerificationResult | null;
+  implementResponses: AgentResponse[] | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -134,6 +139,7 @@ export function runPipeline(
     reviewCycles: null,
     preReviewCycles: null,
     verification: null,
+    implementResponses: null,
   };
 
   let failed = false;
@@ -214,7 +220,7 @@ function executePhase(
     case 'governance':   return runGovernancePhase(index, root, config, state, start);
     case 'docs':         return runDocsPhase(index, root, config, state, start);
     case 'preReview':    return runPreReviewPhase(index, config, options, state, start);
-    case 'implement':    return runImplementPhase(index, options, state, start);
+    case 'implement':    return runImplementPhase(index, root, config, options, state, start);
     case 'validate':     return runValidatePhase(index, root, config, state, start);
     case 'review':       return runReviewPhase(index, config, options, state, start);
     case 'verify':       return runVerifyPhase(index, state, start);
@@ -375,20 +381,72 @@ function runPreReviewPhase(
 }
 
 function runImplementPhase(
-  index: number, options: PipelineOptions, _state: PipelineState, start: number,
+  index: number, root: string, config: ResolvedConfig,
+  options: PipelineOptions, state: PipelineState, start: number,
 ): PhaseOutcome {
   if (options.noImplement) {
     return makeOutcome('implement', index, 'skipped', 'disabled via options', Date.now() - start);
   }
 
-  if (!options.headless) {
-    return makeOutcome('implement', index, 'skipped',
-      'requires --headless mode', Date.now() - start);
+  /* v8 ignore next 3 -- unreachable: graph/plan phases fail first */
+  if (!state.graph || !state.spec || !state.workflow) {
+    return makeOutcome('implement', index, 'error', 'no graph, spec, or workflow available', Date.now() - start);
   }
 
-  // Agent-driven implementation placeholder (D2 will implement)
-  return makeOutcome('implement', index, 'skipped',
-    'not yet implemented', Date.now() - start);
+  // Find implement instructions from the workflow
+  const implementPhase = state.workflow.phases.find((p) => p.phase === 'implement');
+  /* v8 ignore next 3 -- workflow always produces implement phase */
+  if (!implementPhase || !implementPhase.data) {
+    return makeOutcome('implement', index, 'skipped', 'no implementation instructions', Date.now() - start);
+  }
+
+  const instructions = (implementPhase.data as { instructions: readonly { taskId: string; nodeId: string; module: string; action: string; nodeKind: string; context: string; relatedEdges: readonly string[] }[] }).instructions;
+  if (instructions.length === 0) {
+    return makeOutcome('implement', index, 'ok', '0 tasks — nothing to implement', Date.now() - start);
+  }
+
+  // Build the agent driver based on mode
+  const platform = config.agent.platforms[0] ?? 'copilot';
+
+  try {
+    const driver = options.headless
+      ? createApiDriver({
+          provider: config.agent.provider ?? 'openai',
+          apiKey: config.agent.apiKey ?? '',
+          model: config.agent.defaultModel ?? 'default',
+        } satisfies ApiClientConfig)
+      : createDriver(platform, root);
+
+    state.implementResponses = [];
+
+    for (const instr of instructions) {
+      const prompt = buildImplementPrompt(instr, state.graph);
+      const promptFile = (driver as { generatePromptFile?: (req: { prompt: string; context: { constitution: null; graphSlice: string; governance: null; additionalContext: Record<string, string> }; capability: string; platform: string }) => { path: string; content: string } }).generatePromptFile?.({
+        prompt,
+        context: {
+          constitution: null,
+          graphSlice: JSON.stringify(state.graph.product),
+          governance: null,
+          additionalContext: {},
+        },
+        capability: 'implement',
+        platform,
+      });
+
+      state.implementResponses.push({
+        content: promptFile?.content ?? prompt,
+        status: 'success',
+        metadata: { platform, duration_ms: 0, tokens_used: null, model: null },
+      });
+    }
+
+    const mode = options.headless ? 'headless' : 'prompt files';
+    return makeOutcome('implement', index, 'ok',
+      `${instructions.length} task(s) dispatched to ${platform} (${mode})`, Date.now() - start);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'unknown error';
+    return makeOutcome('implement', index, 'error', `agent error: ${message}`, Date.now() - start);
+  }
 }
 
 function runValidatePhase(
@@ -482,4 +540,43 @@ function makeOutcome(
   duration_ms: number,
 ): PhaseOutcome {
   return { phase, index, status, detail, duration_ms };
+}
+
+// ---------------------------------------------------------------------------
+// Implement prompt builder
+// ---------------------------------------------------------------------------
+
+interface ImplementInstr {
+  readonly taskId: string;
+  readonly nodeId: string;
+  readonly module: string;
+  readonly action: string;
+  readonly nodeKind: string;
+  readonly context: string;
+  readonly relatedEdges: readonly string[];
+}
+
+export function buildImplementPrompt(instr: ImplementInstr, graph: ProductGraph): string {
+  const lines: string[] = [];
+  lines.push(`# Implementation Task: ${instr.taskId}`);
+  lines.push(`Action: ${instr.action} | Node: ${instr.nodeId} (${instr.nodeKind}) | Module: ${instr.module}`);
+  lines.push('');
+  lines.push('## Context');
+  lines.push(instr.context);
+  lines.push('');
+
+  if (instr.relatedEdges.length > 0) {
+    lines.push('## Related Edges');
+    for (const e of instr.relatedEdges) {
+      lines.push(`- ${e}`);
+    }
+    lines.push('');
+  }
+
+  lines.push('## Product');
+  lines.push(`Name: ${graph.product.name}`);
+  lines.push(`Modules: ${graph.modules.map((m) => m.name).join(', ')}`);
+  lines.push('');
+
+  return lines.join('\n');
 }

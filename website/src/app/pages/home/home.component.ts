@@ -428,13 +428,13 @@ module todo {
     {
       num: '1',
       title: 'Describe Your Product',
-      desc: 'Use the VS Code extension and your AI agent to write .prd specs. Describe entities, workflows, surfaces, governance, and more - or let your agent write it from a prompt.',
+      desc: 'Use the VS Code extension and your AI agent to write .prd specs. Describe entities, workflows, surfaces, governance, and more - or let your agent write it from a prompt. The init command auto-installs everything you need.',
       cmd: 'prodara init --template minimal',
     },
     {
       num: '2',
-      title: 'Compile & Validate',
-      desc: 'The compiler validates your spec through 15 phases - lexing, parsing, binding, type checking, semantic validation, graph building, and more. Get instant, actionable error messages.',
+      title: 'Build & Implement',
+      desc: 'The compiler validates your spec through 15 phases, then dispatches implementation tasks to your AI agent. In headless mode, agents build directly via API - no UI needed.',
       cmd: 'prodara build .',
     },
     {

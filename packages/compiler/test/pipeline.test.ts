@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { runPipeline, PIPELINE_PHASES } from '../src/orchestrator/pipeline.js';
+import { runPipeline, PIPELINE_PHASES, buildImplementPrompt } from '../src/orchestrator/pipeline.js';
 import type { PhaseName, PipelineOptions } from '../src/orchestrator/pipeline.js';
 import type { ResolvedConfig } from '../src/config/config.js';
 import { DEFAULT_CONFIG } from '../src/config/config.js';
@@ -76,6 +76,21 @@ vi.mock('../src/doc-gen/index.js', () => ({
   writeDocs: vi.fn(),
 }));
 
+vi.mock('../src/agent/agent.js', () => ({
+  createDriver: vi.fn().mockReturnValue({
+    platform: 'copilot',
+    generatePromptFile: vi.fn().mockReturnValue({ path: '/tmp/prompt.md', content: '# Prompt' }),
+    execute: vi.fn().mockResolvedValue({ content: 'done', status: 'success', metadata: { platform: 'copilot', duration_ms: 0, tokens_used: null, model: null } }),
+  }),
+}));
+
+vi.mock('../src/agent/api-client.js', () => ({
+  createApiDriver: vi.fn().mockReturnValue({
+    platform: 'api',
+    execute: vi.fn().mockResolvedValue({ content: 'done', status: 'success', metadata: { platform: 'api', duration_ms: 0, tokens_used: null, model: null } }),
+  }),
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers — import mocked modules
 // ---------------------------------------------------------------------------
@@ -88,6 +103,7 @@ import { runValidation } from '../src/validation/validation.js';
 import { runReviewFixLoop } from '../src/reviewers/index.js';
 import { verify } from '../src/verification/verify.js';
 import { createAuditRecord, writeAuditRecord } from '../src/audit/audit.js';
+import { createDriver } from '../src/agent/agent.js';
 
 const mockCompile = vi.mocked(compile);
 const mockBuildSpec = vi.mocked(buildIncrementalSpec);
@@ -98,6 +114,7 @@ const mockReviewLoop = vi.mocked(runReviewFixLoop);
 const mockVerify = vi.mocked(verify);
 const mockWriteAudit = vi.mocked(writeAuditRecord);
 const mockCreateAudit = vi.mocked(createAuditRecord);
+const mockCreateDriver = vi.mocked(createDriver);
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -153,8 +170,31 @@ function makeCompileResult(opts: { errors?: boolean; warnings?: boolean } = {}):
   } as unknown as CompileResult;
 }
 
-function makeWorkflowResult(ok = true): WorkflowResult {
-  return { phases: [{ phase: 'specify', ok: true, data: {}, warnings: [] }], ok };
+function makeWorkflowResult(ok = true, includeImplement = true): WorkflowResult {
+  const phases: { phase: string; ok: boolean; data: unknown; warnings: string[] }[] = [
+    { phase: 'specify', ok: true, data: {}, warnings: [] },
+  ];
+  if (includeImplement) {
+    phases.push({
+      phase: 'implement',
+      ok: true,
+      data: {
+        instructions: [
+          {
+            taskId: 't1',
+            nodeId: 'ent_0',
+            module: 'mod0',
+            action: 'generate',
+            nodeKind: 'entity',
+            context: 'new entity',
+            relatedEdges: [],
+          },
+        ],
+      },
+      warnings: [],
+    });
+  }
+  return { phases, ok };
 }
 
 function makeVerification(passed = true): VerificationResult {
@@ -239,11 +279,12 @@ describe('runPipeline', () => {
     expect(statuses).toContain('audit:ok');
   });
 
-  it('skips implement when not headless', () => {
+  it('runs implement phase with prompt files when not headless', () => {
     const result = runPipeline('/tmp/project', config);
     const impl = result.phases.find((p) => p.phase === 'implement');
-    expect(impl?.status).toBe('skipped');
-    expect(impl?.detail).toContain('headless');
+    expect(impl?.status).toBe('ok');
+    expect(impl?.detail).toContain('task(s)');
+    expect(impl?.detail).toContain('prompt files');
   });
 
   it('skips implement when noImplement option set', () => {
@@ -253,11 +294,66 @@ describe('runPipeline', () => {
     expect(impl?.detail).toContain('disabled');
   });
 
-  it('skips implement even in headless (not yet implemented)', () => {
-    const result = runPipeline('/tmp/project', config, { headless: true });
+  it('runs implement in headless mode', () => {
+    const headlessConfig: ResolvedConfig = {
+      ...config,
+      agent: { ...config.agent, apiKey: 'test-key', provider: 'openai' },
+    };
+    const result = runPipeline('/tmp/project', headlessConfig, { headless: true });
+    const impl = result.phases.find((p) => p.phase === 'implement');
+    expect(impl?.status).toBe('ok');
+    expect(impl?.detail).toContain('headless');
+  });
+
+  it('reports ok when no implementation instructions', () => {
+    mockRunWorkflow.mockReturnValue(makeWorkflowResult(true, false));
+    const result = runPipeline('/tmp/project', config);
     const impl = result.phases.find((p) => p.phase === 'implement');
     expect(impl?.status).toBe('skipped');
-    expect(impl?.detail).toContain('not yet implemented');
+    expect(impl?.detail).toContain('no implementation instructions');
+  });
+
+  it('reports ok with 0 tasks when instructions array is empty', () => {
+    const emptyImpl: WorkflowResult = {
+      phases: [
+        { phase: 'specify', ok: true, data: {}, warnings: [] },
+        { phase: 'implement', ok: true, data: { instructions: [] }, warnings: [] },
+      ],
+      ok: true,
+    };
+    mockRunWorkflow.mockReturnValue(emptyImpl);
+    const result = runPipeline('/tmp/project', config);
+    const impl = result.phases.find((p) => p.phase === 'implement');
+    expect(impl?.status).toBe('ok');
+    expect(impl?.detail).toContain('0 tasks');
+  });
+
+  it('handles agent error during implement phase', () => {
+    // Force createDriver to throw
+    mockCreateDriver.mockImplementationOnce(() => { throw new Error('agent unavailable'); });
+    const result = runPipeline('/tmp/project', config);
+    const impl = result.phases.find((p) => p.phase === 'implement');
+    expect(impl?.status).toBe('error');
+    expect(impl?.detail).toContain('agent error');
+  });
+
+  it('handles non-Error throw during implement phase', () => {
+    mockCreateDriver.mockImplementationOnce(() => { throw 'string error'; });
+    const result = runPipeline('/tmp/project', config);
+    const impl = result.phases.find((p) => p.phase === 'implement');
+    expect(impl?.status).toBe('error');
+    expect(impl?.detail).toContain('unknown error');
+  });
+
+  it('falls back to defaults for null agent config in headless mode', () => {
+    const minimalConfig: ResolvedConfig = {
+      ...config,
+      agent: { platforms: [], defaultModel: null, apiKey: null, provider: null },
+    };
+    const result = runPipeline('/tmp/project', minimalConfig, { headless: true });
+    const impl = result.phases.find((p) => p.phase === 'implement');
+    expect(impl?.status).toBe('ok');
+    expect(impl?.detail).toContain('headless');
   });
 
   it('skips validate when no commands configured', () => {
@@ -379,7 +475,7 @@ describe('runPipeline', () => {
     const result = runPipeline('/tmp/project', config);
     const wfPhase = result.phases.find((p) => p.phase === 'workflow');
     expect(wfPhase?.status).toBe('ok');
-    expect(wfPhase?.detail).toContain('1 phases completed');
+    expect(wfPhase?.detail).toContain('2 phases completed');
   });
 
   it('reports workflow warnings when not ok', () => {
@@ -553,5 +649,53 @@ describe('runPipeline', () => {
     const docsPhase = result.phases.find((p) => p.phase === 'docs');
     expect(docsPhase?.status).toBe('skipped');
     expect(docsPhase?.detail).toContain('disabled');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildImplementPrompt
+// ---------------------------------------------------------------------------
+
+describe('buildImplementPrompt', () => {
+  const baseGraph: ProductGraph = {
+    product: { name: 'TestApp', version: '1.0.0', modules: ['core'] },
+    modules: [{ id: 'core', kind: 'module', name: 'core', imports: [], entities: [], workflows: [], surfaces: [] }],
+    edges: [],
+  };
+
+  it('generates prompt with task details and product context', () => {
+    const instr = {
+      taskId: 'T1',
+      action: 'create',
+      nodeId: 'core.entity.user',
+      nodeKind: 'entity',
+      module: 'core',
+      context: 'Create user entity',
+      relatedEdges: [] as string[],
+    };
+    const prompt = buildImplementPrompt(instr, baseGraph);
+    expect(prompt).toContain('# Implementation Task: T1');
+    expect(prompt).toContain('Action: create');
+    expect(prompt).toContain('Node: core.entity.user (entity)');
+    expect(prompt).toContain('Module: core');
+    expect(prompt).toContain('Create user entity');
+    expect(prompt).toContain('Name: TestApp');
+    expect(prompt).not.toContain('## Related Edges');
+  });
+
+  it('includes related edges when present', () => {
+    const instr = {
+      taskId: 'T2',
+      action: 'modify',
+      nodeId: 'core.workflow.submit',
+      nodeKind: 'workflow',
+      module: 'core',
+      context: 'Modify workflow',
+      relatedEdges: ['core.entity.user -> core.workflow.submit', 'core.workflow.submit -> core.surface.dashboard'],
+    };
+    const prompt = buildImplementPrompt(instr, baseGraph);
+    expect(prompt).toContain('## Related Edges');
+    expect(prompt).toContain('- core.entity.user -> core.workflow.submit');
+    expect(prompt).toContain('- core.workflow.submit -> core.surface.dashboard');
   });
 });
