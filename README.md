@@ -37,6 +37,7 @@ cd my-product
 
 # Build: validate → graph → plan → workflow → implement → review → verify
 prodara build
+prodara build --dry-run    # Preview implementation tasks without executing
 
 # Or run individual phases
 prodara validate          # Type-check .prd files
@@ -93,6 +94,8 @@ prodara diff              # Show semantic changes
 - **29 slash commands** — Build, validate, specify, plan, implement, review, explore, party, add-entity, add-workflow, explain, and more
 - **Machine-readable output** — Every command supports `--format json` for structured AI consumption
 - **Headless API driver** — No UI required; agents drive builds via CLI or programmatic API
+- **Dry-run mode** — Preview implementation tasks without executing them (`--dry-run`)
+- **Validate-after-implement** — Automatic retry loop in headless mode if validation fails
 
 ### Tooling
 - **VS Code extension** — Syntax highlighting, diagnostics, completions, hover, go-to-definition, find references, graph visualizer
@@ -419,7 +422,7 @@ All settings are optional — sensible defaults are built in.
     "test": "npm test",
     "build": "npm run build"
   },
-  "agent": { "provider": "openai", "defaultModel": "gpt-4" },
+  "agent": { "provider": "openai", "defaultModel": "gpt-4", "maxImplementRetries": 1 },
   "audit": { "enabled": true },
   "constitution": { "path": "./constitution.prd" },
   "workflows": {
@@ -434,7 +437,7 @@ The test suite covers every subsystem:
 
 | Metric | Value |
 |--------|-------|
-| **Total tests** | 1,096+ across 50 test files |
+| **Total tests** | 1,689+ across 50 test files |
 | **Coverage** | 100% lines, branches, functions, statements |
 | **Packages tested** | compiler, lsp, templates |
 
@@ -445,7 +448,7 @@ The test suite covers every subsystem:
 | **Compiler core** | lexer, parser, binder, checker | Tokenization, AST construction, symbol resolution, type analysis |
 | **Graph** | graph, graph-validator, planner | Product Graph construction, 42 edge types, diffing, impact propagation |
 | **Engine** | workflow, reviewers, verification | 6 phases, 9 reviewers, review/fix loop, integrity checks |
-| **CLI** | cli, pipeline, orchestrator | All 41 commands, build orchestration, summary formatting |
+| **CLI** | cli, pipeline, orchestrator | All 41 commands, build orchestration, AI implementation, summary formatting |
 | **Features** | incremental, proposals, drift, checklist, analyze | Incremental spec, change proposals, drift detection, quality analysis |
 | **Infrastructure** | config, discovery, build-state, registry | Configuration, file discovery, state persistence, presets |
 | **Integration** | integration, runtime, agent | End-to-end fixture-based compilation, environment resolution |
@@ -492,9 +495,10 @@ prodara/
 │   │   │   ├── planner/   # Differ + impact propagation + planner
 │   │   │   ├── workflow/  # 6-phase workflow engine
 │   │   │   ├── reviewers/ # 9 built-in reviewer agents
+│   │   │   ├── implement/ # AI-driven code generation
 │   │   │   ├── cli/       # Commander-based CLI (41 commands)
 │   │   │   └── ...        # incremental, verification, audit, config, ...
-│   │   └── test/          # 45 test suites
+│   │   └── test/          # 47 test suites
 │   ├── cli/               # @prodara/cli — global wrapper
 │   ├── templates/         # @prodara/templates — prompts for phases + reviewers
 │   ├── lsp/               # @prodara/lsp — Language Server Protocol

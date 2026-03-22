@@ -195,6 +195,14 @@ describe('loadConfig', () => {
     expect(result.config.agent.apiKey).toBeNull();
   });
 
+  it('loads agent maxImplementRetries', () => {
+    writeFileSync(join(TEST_DIR, CONFIG_FILENAME), JSON.stringify({
+      agent: { maxImplementRetries: 3 },
+    }), 'utf-8');
+    const result = loadConfig(TEST_DIR);
+    expect(result.config.agent.maxImplementRetries).toBe(3);
+  });
+
   it('loads audit config', () => {
     writeFileSync(join(TEST_DIR, CONFIG_FILENAME), JSON.stringify({
       audit: { enabled: false, path: 'logs/' },

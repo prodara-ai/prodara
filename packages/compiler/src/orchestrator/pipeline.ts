@@ -38,6 +38,8 @@ import type { SpecTestSuiteResult } from '../testing/test-runner.js';
 import type { ConstitutionResolutionResult } from '../registry/resolution.js';
 import type { BuildStatus } from './types.js';
 import type { AgentResponse } from '../agent/types.js';
+import type { ImplementPhaseResult } from '../implement/types.js';
+import { buildImplementTasks, buildImplementPrompt as buildRichImplementPrompt, executeImplementation } from '../implement/implement.js';
 
 import { compile } from '../cli/compile.js';
 import type { CompileResult } from '../cli/compile.js';
@@ -82,6 +84,7 @@ export interface PipelineOptions {
   readonly noImplement?: boolean;
   readonly noReview?: boolean;
   readonly noPreReview?: boolean;
+  readonly dryRun?: boolean;
   readonly onProgress?: (phase: PhaseName, index: number, total: number) => void;
 }
 
@@ -92,6 +95,7 @@ export interface PipelineResult {
   readonly graph: ProductGraph | null;
   readonly spec: IncrementalSpec | null;
   readonly verification: VerificationResult | null;
+  readonly implementResult: ImplementPhaseResult | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -112,17 +116,18 @@ interface PipelineState {
   preReviewCycles: readonly ReviewCycleResult[] | null;
   verification: VerificationResult | null;
   implementResponses: AgentResponse[] | null;
+  implementResult: ImplementPhaseResult | null;
 }
 
 // ---------------------------------------------------------------------------
 // Pipeline runner
 // ---------------------------------------------------------------------------
 
-export function runPipeline(
+export async function runPipeline(
   root: string,
   config: ResolvedConfig,
   options: PipelineOptions = {},
-): PipelineResult {
+): Promise<PipelineResult> {
   const pipelineStart = Date.now();
   const outcomes: PhaseOutcome[] = [];
   const total = PIPELINE_PHASES.length;
@@ -140,6 +145,7 @@ export function runPipeline(
     preReviewCycles: null,
     verification: null,
     implementResponses: null,
+    implementResult: null,
   };
 
   let failed = false;
@@ -155,7 +161,7 @@ export function runPipeline(
     }
 
     const start = Date.now();
-    const outcome = executePhase(phase, i, root, config, options, state, start);
+    const outcome = await executePhase(phase, i, root, config, options, state, start);
     outcomes.push(outcome);
 
     if (outcome.status === 'error') {
@@ -195,6 +201,7 @@ export function runPipeline(
     graph: state.graph,
     spec: state.spec,
     verification: state.verification,
+    implementResult: state.implementResult,
   };
 }
 
@@ -202,7 +209,7 @@ export function runPipeline(
 // Phase dispatcher
 // ---------------------------------------------------------------------------
 
-function executePhase(
+async function executePhase(
   phase: PhaseName,
   index: number,
   root: string,
@@ -210,7 +217,7 @@ function executePhase(
   options: PipelineOptions,
   state: PipelineState,
   start: number,
-): PhaseOutcome {
+): Promise<PhaseOutcome> {
   switch (phase) {
     case 'constitution': return runConstitutionPhase(index, state, start);
     case 'compile':      return runCompilePhase(index, root, state, start);
@@ -220,7 +227,7 @@ function executePhase(
     case 'governance':   return runGovernancePhase(index, root, config, state, start);
     case 'docs':         return runDocsPhase(index, root, config, state, start);
     case 'preReview':    return runPreReviewPhase(index, config, options, state, start);
-    case 'implement':    return runImplementPhase(index, root, config, options, state, start);
+    case 'implement':    return await runImplementPhase(index, root, config, options, state, start);
     case 'validate':     return runValidatePhase(index, root, config, state, start);
     case 'review':       return runReviewPhase(index, config, options, state, start);
     case 'verify':       return runVerifyPhase(index, state, start);
@@ -380,10 +387,10 @@ function runPreReviewPhase(
     `accepted after ${state.preReviewCycles.length} cycle(s)`, Date.now() - start);
 }
 
-function runImplementPhase(
+async function runImplementPhase(
   index: number, root: string, config: ResolvedConfig,
   options: PipelineOptions, state: PipelineState, start: number,
-): PhaseOutcome {
+): Promise<PhaseOutcome> {
   if (options.noImplement) {
     return makeOutcome('implement', index, 'skipped', 'disabled via options', Date.now() - start);
   }
@@ -393,16 +400,31 @@ function runImplementPhase(
     return makeOutcome('implement', index, 'error', 'no graph, spec, or workflow available', Date.now() - start);
   }
 
-  // Find implement instructions from the workflow
-  const implementPhase = state.workflow.phases.find((p) => p.phase === 'implement');
-  /* v8 ignore next 3 -- workflow always produces implement phase */
-  if (!implementPhase || !implementPhase.data) {
-    return makeOutcome('implement', index, 'skipped', 'no implementation instructions', Date.now() - start);
+  // Build proper implementation tasks from the implement module
+  const tasks = buildImplementTasks(state.graph, state.spec);
+  if (tasks.length === 0) {
+    return makeOutcome('implement', index, 'ok', '0 tasks — nothing to implement', Date.now() - start);
   }
 
-  const instructions = (implementPhase.data as { instructions: readonly { taskId: string; nodeId: string; module: string; action: string; nodeKind: string; context: string; relatedEdges: readonly string[] }[] }).instructions;
-  if (instructions.length === 0) {
-    return makeOutcome('implement', index, 'ok', '0 tasks — nothing to implement', Date.now() - start);
+  // Dry-run mode: report tasks without executing
+  if (options.dryRun) {
+    const dryRunResults = tasks.map((t) => ({
+      taskId: t.taskId,
+      nodeId: t.nodeId,
+      status: 'skipped' as const,
+      platform: 'api' as const,
+      duration_ms: 0,
+      outputPath: null,
+    }));
+    state.implementResult = {
+      ok: true,
+      tasks: dryRunResults,
+      totalGenerated: 0,
+      totalFailed: 0,
+      totalSkipped: tasks.length,
+    };
+    return makeOutcome('implement', index, 'ok',
+      `${tasks.length} task(s) planned (dry-run)`, Date.now() - start);
   }
 
   // Build the agent driver based on mode
@@ -417,32 +439,73 @@ function runImplementPhase(
         } satisfies ApiClientConfig)
       : createDriver(platform, root);
 
+    // Extract governance rules from governance files
+    const governanceRules: import('../governance/types.js').GovernanceRule[] = [];
+    if (state.governanceFiles) {
+      for (const gf of state.governanceFiles) {
+        // Parse governance content for rules (each line is a rule)
+        for (const line of gf.content.split('\n')) {
+          const trimmed = line.trim();
+          if (trimmed && !trimmed.startsWith('#')) {
+            governanceRules.push({ category: 'convention', rule: trimmed });
+          }
+        }
+      }
+    }
+
+    // Constitution content (not yet resolved at this stage)
+    const constitutionContent: string | null = null;
+
+    // Build prompts using the rich implement module
+    const prompts = tasks.map((task) =>
+      buildRichImplementPrompt(task, state.graph!, constitutionContent, governanceRules),
+    );
+
+    // Serialize governance for executeImplementation
+    const governanceStr = governanceRules.length > 0
+      ? governanceRules.map((r) => `[${r.category}] ${r.rule}`).join('\n')
+      : null;
+
+    // Execute implementation
+    const result = await executeImplementation(
+      tasks, prompts, driver, constitutionContent, governanceStr,
+    );
+
+    state.implementResult = result;
     state.implementResponses = [];
 
-    for (const instr of instructions) {
-      const prompt = buildImplementPrompt(instr, state.graph);
-      const promptFile = (driver as { generatePromptFile?: (req: { prompt: string; context: { constitution: null; graphSlice: string; governance: null; additionalContext: Record<string, string> }; capability: string; platform: string }) => { path: string; content: string } }).generatePromptFile?.({
-        prompt,
-        context: {
-          constitution: null,
-          graphSlice: JSON.stringify(state.graph.product),
-          governance: null,
-          additionalContext: {},
-        },
-        capability: 'implement',
-        platform,
-      });
+    // Validate-after-implement loop for headless mode
+    /* v8 ignore next -- maxImplementRetries always set by resolveAgent */
+    const maxRetries = config.agent.maxImplementRetries ?? 1;
+    if (options.headless && !result.ok && maxRetries > 0) {
+      const validationResult = runValidation(config.validation, root);
+      if (!validationResult.passed) {
+        // Retry with error context
+        const errorContext = validationResult.results
+          .filter((r) => r.status === 'failed')
+          .map((r) => `${r.step}: ${r.stderr || r.stdout || 'failed'}`)
+          .join('\n');
 
-      state.implementResponses.push({
-        content: promptFile?.content ?? prompt,
-        status: 'success',
-        metadata: { platform, duration_ms: 0, tokens_used: null, model: null },
-      });
+        const retryPrompts = tasks.map((task) => {
+          const base = buildRichImplementPrompt(task, state.graph!, constitutionContent, governanceRules);
+          return {
+            ...base,
+            prompt: base.prompt + `\n\n## Validation Errors (fix these)\n${errorContext}\n`,
+          };
+        });
+
+        const retryResult = await executeImplementation(
+          tasks, retryPrompts, driver, constitutionContent, governanceStr,
+        );
+        state.implementResult = retryResult;
+      }
     }
 
     const mode = options.headless ? 'headless' : 'prompt files';
-    return makeOutcome('implement', index, 'ok',
-      `${instructions.length} task(s) dispatched to ${platform} (${mode})`, Date.now() - start);
+    const finalResult = state.implementResult;
+    return makeOutcome('implement', index, finalResult.ok ? 'ok' : 'warn',
+      `${tasks.length} task(s) dispatched to ${platform} (${mode}) — ${finalResult.totalGenerated} generated, ${finalResult.totalFailed} failed`,
+      Date.now() - start);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
     return makeOutcome('implement', index, 'error', `agent error: ${message}`, Date.now() - start);
@@ -543,7 +606,7 @@ function makeOutcome(
 }
 
 // ---------------------------------------------------------------------------
-// Implement prompt builder
+// Implement prompt builder (delegates to implement module)
 // ---------------------------------------------------------------------------
 
 interface ImplementInstr {
@@ -557,26 +620,16 @@ interface ImplementInstr {
 }
 
 export function buildImplementPrompt(instr: ImplementInstr, graph: ProductGraph): string {
-  const lines: string[] = [];
-  lines.push(`# Implementation Task: ${instr.taskId}`);
-  lines.push(`Action: ${instr.action} | Node: ${instr.nodeId} (${instr.nodeKind}) | Module: ${instr.module}`);
-  lines.push('');
-  lines.push('## Context');
-  lines.push(instr.context);
-  lines.push('');
-
-  if (instr.relatedEdges.length > 0) {
-    lines.push('## Related Edges');
-    for (const e of instr.relatedEdges) {
-      lines.push(`- ${e}`);
-    }
-    lines.push('');
-  }
-
-  lines.push('## Product');
-  lines.push(`Name: ${graph.product.name}`);
-  lines.push(`Modules: ${graph.modules.map((m) => m.name).join(', ')}`);
-  lines.push('');
-
-  return lines.join('\n');
+  const task = {
+    taskId: instr.taskId,
+    nodeId: instr.nodeId,
+    module: instr.module,
+    action: instr.action as 'generate' | 'regenerate' | 'remove' | 'verify',
+    nodeKind: instr.nodeKind,
+    context: instr.context,
+    relatedEdges: instr.relatedEdges,
+    fieldDefinitions: [] as string[],
+  };
+  const prompt = buildRichImplementPrompt(task, graph, null, []);
+  return prompt.prompt;
 }

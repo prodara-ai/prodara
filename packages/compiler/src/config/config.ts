@@ -98,6 +98,7 @@ export interface AgentConfig {
   readonly defaultModel?: string | null;
   readonly apiKey?: string | null;
   readonly provider?: ApiProvider | null;
+  readonly maxImplementRetries?: number;
 }
 
 export interface AuditConfig {
@@ -185,6 +186,7 @@ export interface ResolvedAgentConfig {
   readonly defaultModel: string | null;
   readonly apiKey: string | null;
   readonly provider: ApiProvider | null;
+  readonly maxImplementRetries: number;
 }
 
 export interface ResolvedAuditConfig {
@@ -281,6 +283,7 @@ const DEFAULT_AGENT: ResolvedAgentConfig = {
   defaultModel: null,
   apiKey: null,
   provider: null,
+  maxImplementRetries: 1,
 };
 
 const DEFAULT_AUDIT: ResolvedAuditConfig = {
@@ -650,7 +653,12 @@ function resolveAgent(
     }
   }
 
-  return { platforms, defaultModel, apiKey, provider };
+  let maxImplementRetries = DEFAULT_AGENT.maxImplementRetries;
+  if (typeof raw['maxImplementRetries'] === 'number' && Number.isInteger(raw['maxImplementRetries']) && raw['maxImplementRetries'] >= 0) {
+    maxImplementRetries = raw['maxImplementRetries'];
+  }
+
+  return { platforms, defaultModel, apiKey, provider, maxImplementRetries };
 }
 
 function resolveAudit(

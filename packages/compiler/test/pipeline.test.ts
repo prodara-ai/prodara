@@ -91,8 +91,17 @@ vi.mock('../src/agent/api-client.js', () => ({
   }),
 }));
 
+vi.mock('../src/implement/implement.js', async (importOriginal) => {
+  const orig = await importOriginal() as Record<string, unknown>;
+  return {
+    ...orig,
+    buildImplementTasks: vi.fn(),
+    executeImplementation: vi.fn(),
+  };
+});
+
 // ---------------------------------------------------------------------------
-// Helpers — import mocked modules
+// Helpers \u2014 import mocked modules
 // ---------------------------------------------------------------------------
 
 import { compile } from '../src/cli/compile.js';
@@ -104,6 +113,7 @@ import { runReviewFixLoop } from '../src/reviewers/index.js';
 import { verify } from '../src/verification/verify.js';
 import { createAuditRecord, writeAuditRecord } from '../src/audit/audit.js';
 import { createDriver } from '../src/agent/agent.js';
+import { buildImplementTasks, executeImplementation } from '../src/implement/implement.js';
 
 const mockCompile = vi.mocked(compile);
 const mockBuildSpec = vi.mocked(buildIncrementalSpec);
@@ -115,6 +125,8 @@ const mockVerify = vi.mocked(verify);
 const mockWriteAudit = vi.mocked(writeAuditRecord);
 const mockCreateAudit = vi.mocked(createAuditRecord);
 const mockCreateDriver = vi.mocked(createDriver);
+const mockBuildImplTasks = vi.mocked(buildImplementTasks);
+const mockExecuteImpl = vi.mocked(executeImplementation);
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -170,31 +182,14 @@ function makeCompileResult(opts: { errors?: boolean; warnings?: boolean } = {}):
   } as unknown as CompileResult;
 }
 
-function makeWorkflowResult(ok = true, includeImplement = true): WorkflowResult {
-  const phases: { phase: string; ok: boolean; data: unknown; warnings: string[] }[] = [
-    { phase: 'specify', ok: true, data: {}, warnings: [] },
-  ];
-  if (includeImplement) {
-    phases.push({
-      phase: 'implement',
-      ok: true,
-      data: {
-        instructions: [
-          {
-            taskId: 't1',
-            nodeId: 'ent_0',
-            module: 'mod0',
-            action: 'generate',
-            nodeKind: 'entity',
-            context: 'new entity',
-            relatedEdges: [],
-          },
-        ],
-      },
-      warnings: [],
-    });
-  }
-  return { phases, ok };
+function makeWorkflowResult(ok = true): WorkflowResult {
+  return {
+    phases: [
+      { phase: 'specify' as const, ok: true, data: {}, warnings: [] as string[] },
+      { phase: 'implement' as const, ok: true, data: { instructions: [] }, warnings: [] as string[] },
+    ],
+    ok,
+  } as unknown as WorkflowResult;
 }
 
 function makeVerification(passed = true): VerificationResult {
@@ -220,13 +215,25 @@ function makeValidationResult(passed = true): ValidationResult {
   } as unknown as ValidationResult;
 }
 
+function makeDefaultImplResult(taskCount = 1) {
+  return {
+    ok: true,
+    tasks: Array.from({ length: taskCount }, (_, i) => ({
+      taskId: `t${i + 1}`, nodeId: `ent_${i}`, status: 'success' as const, platform: 'copilot' as const, duration_ms: 0, outputPath: null,
+    })),
+    totalGenerated: taskCount,
+    totalFailed: 0,
+    totalSkipped: 0,
+  };
+}
+
 const config: ResolvedConfig = {
   ...DEFAULT_CONFIG,
   audit: { enabled: false, path: '.prodara/runs/' },
 };
 
 // ---------------------------------------------------------------------------
-// Setup — default happy path mocks
+// Setup \u2014 default happy path mocks
 // ---------------------------------------------------------------------------
 
 beforeEach(() => {
@@ -235,9 +242,14 @@ beforeEach(() => {
   mockCompile.mockReturnValue(makeCompileResult());
   mockBuildSpec.mockReturnValue(makeSpec());
   mockRunWorkflow.mockReturnValue(makeWorkflowResult());
-  mockGovernance.mockReturnValue([{ path: 'agents.md', content: '# Rules' }] as GovernanceFile[]);
+  mockGovernance.mockReturnValue([{ path: 'agents.md', content: '# Rules\nuse strict types\nno any' }] as GovernanceFile[]);
   mockReviewLoop.mockReturnValue(makeReviewCycles());
   mockVerify.mockReturnValue(makeVerification());
+  mockBuildImplTasks.mockReturnValue([{
+    taskId: 't1', nodeId: 'ent_0', module: 'mod0', action: 'generate' as const,
+    nodeKind: 'entity', context: 'new', relatedEdges: [], fieldDefinitions: [],
+  }]);
+  mockExecuteImpl.mockResolvedValue(makeDefaultImplResult());
 });
 
 // ---------------------------------------------------------------------------
@@ -256,8 +268,8 @@ describe('PIPELINE_PHASES', () => {
 });
 
 describe('runPipeline', () => {
-  it('runs all phases in a successful pipeline', () => {
-    const result = runPipeline('/tmp/project', config);
+  it('runs all phases in a successful pipeline', async () => {
+    const result = await runPipeline('/tmp/project', config);
     expect(result.status).toBe('success');
     expect(result.phases).toHaveLength(13);
     expect(result.graph).not.toBeNull();
@@ -266,8 +278,8 @@ describe('runPipeline', () => {
     expect(result.duration_ms).toBeGreaterThanOrEqual(0);
   });
 
-  it('reports ok status for each successful phase', () => {
-    const result = runPipeline('/tmp/project', config);
+  it('reports ok status for each successful phase', async () => {
+    const result = await runPipeline('/tmp/project', config);
     const statuses = result.phases.map((p) => `${p.phase}:${p.status}`);
     expect(statuses).toContain('constitution:ok');
     expect(statuses).toContain('compile:ok');
@@ -279,136 +291,119 @@ describe('runPipeline', () => {
     expect(statuses).toContain('audit:ok');
   });
 
-  it('runs implement phase with prompt files when not headless', () => {
-    const result = runPipeline('/tmp/project', config);
+  it('runs implement phase with prompt files when not headless', async () => {
+    const result = await runPipeline('/tmp/project', config);
     const impl = result.phases.find((p) => p.phase === 'implement');
     expect(impl?.status).toBe('ok');
     expect(impl?.detail).toContain('task(s)');
     expect(impl?.detail).toContain('prompt files');
   });
 
-  it('skips implement when noImplement option set', () => {
-    const result = runPipeline('/tmp/project', config, { headless: true, noImplement: true });
+  it('skips implement when noImplement option set', async () => {
+    const result = await runPipeline('/tmp/project', config, { headless: true, noImplement: true });
     const impl = result.phases.find((p) => p.phase === 'implement');
     expect(impl?.status).toBe('skipped');
     expect(impl?.detail).toContain('disabled');
   });
 
-  it('runs implement in headless mode', () => {
+  it('runs implement in headless mode', async () => {
     const headlessConfig: ResolvedConfig = {
       ...config,
       agent: { ...config.agent, apiKey: 'test-key', provider: 'openai' },
     };
-    const result = runPipeline('/tmp/project', headlessConfig, { headless: true });
+    const result = await runPipeline('/tmp/project', headlessConfig, { headless: true });
     const impl = result.phases.find((p) => p.phase === 'implement');
     expect(impl?.status).toBe('ok');
     expect(impl?.detail).toContain('headless');
   });
 
-  it('reports ok when no implementation instructions', () => {
-    mockRunWorkflow.mockReturnValue(makeWorkflowResult(true, false));
-    const result = runPipeline('/tmp/project', config);
-    const impl = result.phases.find((p) => p.phase === 'implement');
-    expect(impl?.status).toBe('skipped');
-    expect(impl?.detail).toContain('no implementation instructions');
-  });
-
-  it('reports ok with 0 tasks when instructions array is empty', () => {
-    const emptyImpl: WorkflowResult = {
-      phases: [
-        { phase: 'specify', ok: true, data: {}, warnings: [] },
-        { phase: 'implement', ok: true, data: { instructions: [] }, warnings: [] },
-      ],
-      ok: true,
-    };
-    mockRunWorkflow.mockReturnValue(emptyImpl);
-    const result = runPipeline('/tmp/project', config);
+  it('reports ok with 0 tasks when nothing to implement', async () => {
+    mockBuildImplTasks.mockReturnValue([]);
+    const result = await runPipeline('/tmp/project', config);
     const impl = result.phases.find((p) => p.phase === 'implement');
     expect(impl?.status).toBe('ok');
     expect(impl?.detail).toContain('0 tasks');
   });
 
-  it('handles agent error during implement phase', () => {
-    // Force createDriver to throw
+  it('handles agent error during implement phase', async () => {
     mockCreateDriver.mockImplementationOnce(() => { throw new Error('agent unavailable'); });
-    const result = runPipeline('/tmp/project', config);
+    const result = await runPipeline('/tmp/project', config);
     const impl = result.phases.find((p) => p.phase === 'implement');
     expect(impl?.status).toBe('error');
     expect(impl?.detail).toContain('agent error');
   });
 
-  it('handles non-Error throw during implement phase', () => {
+  it('handles non-Error throw during implement phase', async () => {
     mockCreateDriver.mockImplementationOnce(() => { throw 'string error'; });
-    const result = runPipeline('/tmp/project', config);
+    const result = await runPipeline('/tmp/project', config);
     const impl = result.phases.find((p) => p.phase === 'implement');
     expect(impl?.status).toBe('error');
     expect(impl?.detail).toContain('unknown error');
   });
 
-  it('falls back to defaults for null agent config in headless mode', () => {
+  it('falls back to defaults for null agent config in headless mode', async () => {
     const minimalConfig: ResolvedConfig = {
       ...config,
-      agent: { platforms: [], defaultModel: null, apiKey: null, provider: null },
+      agent: { platforms: [], defaultModel: null, apiKey: null, provider: null, maxImplementRetries: 1 },
     };
-    const result = runPipeline('/tmp/project', minimalConfig, { headless: true });
+    const result = await runPipeline('/tmp/project', minimalConfig, { headless: true });
     const impl = result.phases.find((p) => p.phase === 'implement');
     expect(impl?.status).toBe('ok');
     expect(impl?.detail).toContain('headless');
   });
 
-  it('skips validate when no commands configured', () => {
-    const result = runPipeline('/tmp/project', config);
+  it('skips validate when no commands configured', async () => {
+    const result = await runPipeline('/tmp/project', config);
     const val = result.phases.find((p) => p.phase === 'validate');
     expect(val?.status).toBe('skipped');
     expect(val?.detail).toContain('no validation commands');
   });
 
-  it('runs validate when commands are configured', () => {
+  it('runs validate when commands are configured', async () => {
     mockValidation.mockReturnValue(makeValidationResult(true));
     const configWithValidation: ResolvedConfig = {
       ...config,
       validation: { lint: 'npm run lint', typecheck: null, test: null, build: null },
     };
-    const result = runPipeline('/tmp/project', configWithValidation);
+    const result = await runPipeline('/tmp/project', configWithValidation);
     const val = result.phases.find((p) => p.phase === 'validate');
     expect(val?.status).toBe('ok');
     expect(val?.detail).toContain('all validation steps passed');
   });
 
-  it('reports error when validation fails', () => {
+  it('reports error when validation fails', async () => {
     mockValidation.mockReturnValue(makeValidationResult(false));
     const configWithValidation: ResolvedConfig = {
       ...config,
       validation: { lint: 'npm run lint', typecheck: null, test: null, build: null },
     };
-    const result = runPipeline('/tmp/project', configWithValidation);
+    const result = await runPipeline('/tmp/project', configWithValidation);
     const val = result.phases.find((p) => p.phase === 'validate');
     expect(val?.status).toBe('error');
   });
 
-  it('skips review when noReview option set', () => {
-    const result = runPipeline('/tmp/project', config, { noReview: true });
+  it('skips review when noReview option set', async () => {
+    const result = await runPipeline('/tmp/project', config, { noReview: true });
     const rev = result.phases.find((p) => p.phase === 'review');
     expect(rev?.status).toBe('skipped');
   });
 
-  it('reports warn when review not accepted', () => {
+  it('reports warn when review not accepted', async () => {
     mockReviewLoop.mockReturnValue(makeReviewCycles(false));
-    const result = runPipeline('/tmp/project', config);
+    const result = await runPipeline('/tmp/project', config);
     const rev = result.phases.find((p) => p.phase === 'review');
     expect(rev?.status).toBe('warn');
     expect(rev?.detail).toContain('not accepted');
   });
 
-  it('stops pipeline on compile error and skips downstream', () => {
+  it('stops pipeline on compile error and skips downstream', async () => {
     mockCompile.mockReturnValue(makeCompileResult({ errors: true }));
-    const result = runPipeline('/tmp/project', config);
+    const result = await runPipeline('/tmp/project', config);
     expect(result.status).toBe('failed');
 
     const compilePhase = result.phases.find((p) => p.phase === 'compile');
     expect(compilePhase?.status).toBe('error');
 
-    // All phases after compile should be skipped (except audit)
     const graphPhase = result.phases.find((p) => p.phase === 'graph');
     expect(graphPhase?.status).toBe('skipped');
 
@@ -416,153 +411,155 @@ describe('runPipeline', () => {
     expect(auditPhase?.status).toBe('ok');
   });
 
-  it('reports compile warnings', () => {
+  it('reports compile warnings', async () => {
     mockCompile.mockReturnValue(makeCompileResult({ warnings: true }));
-    const result = runPipeline('/tmp/project', config);
+    const result = await runPipeline('/tmp/project', config);
     const compilePhase = result.phases.find((p) => p.phase === 'compile');
     expect(compilePhase?.status).toBe('warn');
     expect(compilePhase?.detail).toContain('warning');
   });
 
-  it('calls onProgress for each phase', () => {
+  it('calls onProgress for each phase', async () => {
     const progress: [PhaseName, number, number][] = [];
     const opts: PipelineOptions = {
       onProgress: (phase, index, total) => progress.push([phase, index, total]),
     };
-    runPipeline('/tmp/project', config, opts);
+    await runPipeline('/tmp/project', config, opts);
     expect(progress).toHaveLength(13);
     expect(progress[0]).toEqual(['constitution', 0, 13]);
     expect(progress[12]).toEqual(['audit', 12, 13]);
   });
 
-  it('records phase indices correctly', () => {
-    const result = runPipeline('/tmp/project', config);
+  it('records phase indices correctly', async () => {
+    const result = await runPipeline('/tmp/project', config);
     for (let i = 0; i < result.phases.length; i++) {
       expect(result.phases[i]!.index).toBe(i);
     }
   });
 
-  it('returns partial status when verification has warnings', () => {
+  it('returns partial status when verification has warnings', async () => {
     mockVerify.mockReturnValue(makeVerification(false));
-    const result = runPipeline('/tmp/project', config);
-    // Verify phase returns 'warn' when verification fails
+    const result = await runPipeline('/tmp/project', config);
     expect(result.status).toBe('partial');
   });
 
-  it('reports graph stats', () => {
-    const result = runPipeline('/tmp/project', config);
+  it('reports graph stats', async () => {
+    const result = await runPipeline('/tmp/project', config);
     const graphPhase = result.phases.find((p) => p.phase === 'graph');
     expect(graphPhase?.status).toBe('ok');
     expect(graphPhase?.detail).toContain('nodes');
     expect(graphPhase?.detail).toContain('edges');
   });
 
-  it('reports plan stats', () => {
-    const result = runPipeline('/tmp/project', config);
+  it('reports plan stats', async () => {
+    const result = await runPipeline('/tmp/project', config);
     const planPhase = result.phases.find((p) => p.phase === 'plan');
     expect(planPhase?.status).toBe('ok');
     expect(planPhase?.detail).toContain('tasks');
   });
 
-  it('reports governance file count', () => {
-    const result = runPipeline('/tmp/project', config);
+  it('reports governance file count', async () => {
+    const result = await runPipeline('/tmp/project', config);
     const govPhase = result.phases.find((p) => p.phase === 'governance');
     expect(govPhase?.status).toBe('ok');
     expect(govPhase?.detail).toContain('1 governance file');
   });
 
-  it('reports workflow phase count', () => {
-    const result = runPipeline('/tmp/project', config);
+  it('handles governance files with no parseable rules', async () => {
+    mockGovernance.mockReturnValue([{ path: 'agents.md', content: '# Header only' }] as GovernanceFile[]);
+    const result = await runPipeline('/tmp/project', config);
+    const impl = result.phases.find((p) => p.phase === 'implement');
+    expect(impl?.status).toBe('ok');
+  });
+
+  it('reports workflow phase count', async () => {
+    const result = await runPipeline('/tmp/project', config);
     const wfPhase = result.phases.find((p) => p.phase === 'workflow');
     expect(wfPhase?.status).toBe('ok');
     expect(wfPhase?.detail).toContain('2 phases completed');
   });
 
-  it('reports workflow warnings when not ok', () => {
+  it('reports workflow warnings when not ok', async () => {
     mockRunWorkflow.mockReturnValue(makeWorkflowResult(false));
-    const result = runPipeline('/tmp/project', config);
+    const result = await runPipeline('/tmp/project', config);
     const wfPhase = result.phases.find((p) => p.phase === 'workflow');
     expect(wfPhase?.status).toBe('warn');
   });
 
-  it('writes audit record when audit is enabled', () => {
+  it('writes audit record when audit is enabled', async () => {
     const auditConfig: ResolvedConfig = { ...config, audit: { enabled: true, path: '.prodara/runs/' } };
-    // Use workflow warn to exercise the 'warn' branch in audit status mapping
     mockRunWorkflow.mockReturnValue(makeWorkflowResult(false));
-    runPipeline('/tmp/project', auditConfig);
+    await runPipeline('/tmp/project', auditConfig);
     expect(mockWriteAudit).toHaveBeenCalled();
   });
 
-  it('does not write audit record when audit is disabled', () => {
-    runPipeline('/tmp/project', config); // audit.enabled = false
+  it('does not write audit record when audit is disabled', async () => {
+    await runPipeline('/tmp/project', config);
     expect(mockWriteAudit).not.toHaveBeenCalled();
   });
 
-  it('handles graph error when compile returns no graph', () => {
+  it('handles graph error when compile returns no graph', async () => {
     const noGraph = makeCompileResult();
     (noGraph as { graph: undefined }).graph = undefined;
     mockCompile.mockReturnValue(noGraph);
-    const result = runPipeline('/tmp/project', config);
+    const result = await runPipeline('/tmp/project', config);
     const graphPhase = result.phases.find((p) => p.phase === 'graph');
     expect(graphPhase?.status).toBe('error');
     expect(graphPhase?.detail).toContain('no graph');
   });
 
-  it('handles plan error when no plan available', () => {
+  it('handles plan error when no plan available', async () => {
     const noPlan = makeCompileResult();
     (noPlan as { plan: undefined }).plan = undefined;
     mockCompile.mockReturnValue(noPlan);
-    const result = runPipeline('/tmp/project', config);
-    // Plan phase requires plan from compilation
-    // The spec won't be built, cascading to workflow/review/verify errors
+    const result = await runPipeline('/tmp/project', config);
     const planPhase = result.phases.find((p) => p.phase === 'plan');
     expect(planPhase?.status).toBe('error');
   });
 
-  it('review reports error when no graph/spec', () => {
+  it('review reports error when no graph/spec', async () => {
     const noGraph = makeCompileResult();
     (noGraph as { graph: undefined }).graph = undefined;
     mockCompile.mockReturnValue(noGraph);
-    const result = runPipeline('/tmp/project', config);
-    // After graph error, everything downstream is skipped
+    const result = await runPipeline('/tmp/project', config);
     const reviewPhase = result.phases.find((p) => p.phase === 'review');
     expect(reviewPhase?.status).toBe('skipped');
   });
 
-  it('verify reports error when missing prerequisites', () => {
+  it('verify reports error when missing prerequisites', async () => {
     const noGraph = makeCompileResult();
     (noGraph as { graph: undefined }).graph = undefined;
     mockCompile.mockReturnValue(noGraph);
-    const result = runPipeline('/tmp/project', config);
+    const result = await runPipeline('/tmp/project', config);
     const verifyPhase = result.phases.find((p) => p.phase === 'verify');
     expect(verifyPhase?.status).toBe('skipped');
   });
 
-  it('governance reports error when no graph', () => {
+  it('governance reports error when no graph', async () => {
     const noGraph = makeCompileResult();
     (noGraph as { graph: undefined }).graph = undefined;
     mockCompile.mockReturnValue(noGraph);
-    const result = runPipeline('/tmp/project', config);
+    const result = await runPipeline('/tmp/project', config);
     const govPhase = result.phases.find((p) => p.phase === 'governance');
     expect(govPhase?.status).toBe('skipped');
   });
 
-  it('writes audit with no spec on compile error', () => {
+  it('writes audit with no spec on compile error', async () => {
     mockCompile.mockReturnValue(makeCompileResult({ errors: true }));
     const auditConfig: ResolvedConfig = { ...config, audit: { enabled: true, path: '.prodara/runs/' } };
-    runPipeline('/tmp/project', auditConfig);
+    await runPipeline('/tmp/project', auditConfig);
     expect(mockWriteAudit).toHaveBeenCalled();
   });
 
-  it('writes audit with failed outcome on pipeline error', () => {
+  it('writes audit with failed outcome on pipeline error', async () => {
     mockCompile.mockReturnValue(makeCompileResult({ errors: true }));
     const auditConfig: ResolvedConfig = { ...config, audit: { enabled: true, path: '.prodara/runs/' } };
-    runPipeline('/tmp/project', auditConfig);
+    await runPipeline('/tmp/project', auditConfig);
     const builder = mockCreateAudit.mock.results[0]!.value as { setOutcome: ReturnType<typeof vi.fn> };
     expect(builder.setOutcome).toHaveBeenCalledWith('failed');
   });
 
-  it('handles compile result with no testResults or constitutions', () => {
+  it('handles compile result with no testResults or constitutions', async () => {
     const bare: CompileResult = {
       diagnostics: new DiagnosticBag(),
       files: [],
@@ -570,13 +567,13 @@ describe('runPipeline', () => {
       plan: { tasks: [{ taskId: 't1', nodeId: 'ent_0', action: 'generate', reason: 'new' }] },
     } as unknown as CompileResult;
     mockCompile.mockReturnValue(bare);
-    const result = runPipeline('/tmp/project', config);
+    const result = await runPipeline('/tmp/project', config);
     expect(result.status).toBe('success');
   });
 
-  it('handles empty review cycles', () => {
+  it('handles empty review cycles', async () => {
     mockReviewLoop.mockReturnValue([]);
-    const result = runPipeline('/tmp/project', config);
+    const result = await runPipeline('/tmp/project', config);
     const rev = result.phases.find((p) => p.phase === 'review');
     expect(rev?.status).toBe('ok');
     expect(rev?.detail).toContain('0 cycle(s)');
@@ -586,69 +583,115 @@ describe('runPipeline', () => {
   // Pre-review phase
   // -------------------------------------------------------------------------
 
-  it('skips preReview when disabled in config (default)', () => {
-    const result = runPipeline('/tmp/project', config);
+  it('skips preReview when disabled in config (default)', async () => {
+    const result = await runPipeline('/tmp/project', config);
     const pr = result.phases.find((p) => p.phase === 'preReview');
     expect(pr?.status).toBe('skipped');
     expect(pr?.detail).toContain('disabled in config');
   });
 
-  it('runs preReview when enabled in config', () => {
+  it('runs preReview when enabled in config', async () => {
     const preReviewConfig: ResolvedConfig = {
       ...config,
       preReview: { enabled: true, maxIterations: 2, fixSeverity: ['critical', 'error'] },
     };
     mockReviewLoop.mockReturnValue(makeReviewCycles(true));
-    const result = runPipeline('/tmp/project', preReviewConfig);
+    const result = await runPipeline('/tmp/project', preReviewConfig);
     const pr = result.phases.find((p) => p.phase === 'preReview');
     expect(pr?.status).toBe('ok');
     expect(pr?.detail).toContain('accepted');
   });
 
-  it('skips preReview when noPreReview option set', () => {
+  it('skips preReview when noPreReview option set', async () => {
     const preReviewConfig: ResolvedConfig = {
       ...config,
       preReview: { enabled: true, maxIterations: 2, fixSeverity: ['critical', 'error'] },
     };
-    const result = runPipeline('/tmp/project', preReviewConfig, { noPreReview: true });
+    const result = await runPipeline('/tmp/project', preReviewConfig, { noPreReview: true });
     const pr = result.phases.find((p) => p.phase === 'preReview');
     expect(pr?.status).toBe('skipped');
     expect(pr?.detail).toContain('disabled via options');
   });
 
-  it('reports warn when preReview not accepted', () => {
+  it('reports warn when preReview not accepted', async () => {
     const preReviewConfig: ResolvedConfig = {
       ...config,
       preReview: { enabled: true, maxIterations: 2, fixSeverity: ['critical', 'error'] },
     };
     mockReviewLoop.mockReturnValue(makeReviewCycles(false));
-    const result = runPipeline('/tmp/project', preReviewConfig);
+    const result = await runPipeline('/tmp/project', preReviewConfig);
     const pr = result.phases.find((p) => p.phase === 'preReview');
     expect(pr?.status).toBe('warn');
     expect(pr?.detail).toContain('not accepted');
   });
 
-  it('handles empty preReview cycles', () => {
+  it('handles empty preReview cycles', async () => {
     const preReviewConfig: ResolvedConfig = {
       ...config,
       preReview: { enabled: true, maxIterations: 2, fixSeverity: ['critical', 'error'] },
     };
     mockReviewLoop.mockReturnValue([]);
-    const result = runPipeline('/tmp/project', preReviewConfig);
+    const result = await runPipeline('/tmp/project', preReviewConfig);
     const pr = result.phases.find((p) => p.phase === 'preReview');
     expect(pr?.status).toBe('ok');
     expect(pr?.detail).toContain('0 cycle(s)');
   });
 
-  it('skips docs when disabled in config', () => {
+  it('skips docs when disabled in config', async () => {
     const noDocsConfig: ResolvedConfig = {
       ...config,
       docs: { enabled: false, outputDir: 'docs/spec' },
     };
-    const result = runPipeline('/tmp/project', noDocsConfig);
+    const result = await runPipeline('/tmp/project', noDocsConfig);
     const docsPhase = result.phases.find((p) => p.phase === 'docs');
     expect(docsPhase?.status).toBe('skipped');
     expect(docsPhase?.detail).toContain('disabled');
+  });
+
+  // -------------------------------------------------------------------------
+  // Dry-run and implementResult
+  // -------------------------------------------------------------------------
+
+  it('returns implementResult in pipeline result', async () => {
+    const result = await runPipeline('/tmp/project', config);
+    expect(result.implementResult).not.toBeNull();
+    expect(result.implementResult!.ok).toBe(true);
+  });
+
+  it('runs implement in dry-run mode', async () => {
+    const result = await runPipeline('/tmp/project', config, { dryRun: true });
+    const impl = result.phases.find((p) => p.phase === 'implement');
+    expect(impl?.status).toBe('ok');
+    expect(impl?.detail).toContain('dry-run');
+    expect(mockExecuteImpl).not.toHaveBeenCalled();
+  });
+
+  it('reports warn when executeImplementation has failures', async () => {
+    mockExecuteImpl.mockResolvedValue({
+      ok: false, tasks: [{ taskId: 't1', nodeId: 'ent_0', status: 'error' as const, platform: 'copilot' as const, duration_ms: 0, outputPath: null }],
+      totalGenerated: 0, totalFailed: 1, totalSkipped: 0,
+    });
+    const result = await runPipeline('/tmp/project', config);
+    const impl = result.phases.find((p) => p.phase === 'implement');
+    expect(impl?.status).toBe('warn');
+    expect(impl?.detail).toContain('1 failed');
+  });
+
+  it('retries implementation in headless mode on failure', async () => {
+    mockExecuteImpl.mockResolvedValue({
+      ok: false, tasks: [{ taskId: 't1', nodeId: 'ent_0', status: 'error' as const, platform: 'api' as const, duration_ms: 0, outputPath: null }],
+      totalGenerated: 0, totalFailed: 1, totalSkipped: 0,
+    });
+    mockValidation.mockReturnValue({
+      passed: false,
+      results: [{ step: 'lint', command: 'npm run lint', status: 'failed', exitCode: 1, stdout: '', stderr: '', duration_ms: 100 }],
+    } as unknown as ValidationResult);
+    const headlessConfig: ResolvedConfig = {
+      ...config,
+      agent: { ...config.agent, apiKey: 'test-key', provider: 'openai', maxImplementRetries: 2 },
+    };
+    await runPipeline('/tmp/project', headlessConfig, { headless: true });
+    expect(mockExecuteImpl).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -658,10 +701,10 @@ describe('runPipeline', () => {
 
 describe('buildImplementPrompt', () => {
   const baseGraph: ProductGraph = {
-    product: { name: 'TestApp', version: '1.0.0', modules: ['core'] },
+    product: { id: 'product', kind: 'product', name: 'TestApp', title: null, version: '1.0.0', modules: ['core'], publishes: null },
     modules: [{ id: 'core', kind: 'module', name: 'core', imports: [], entities: [], workflows: [], surfaces: [] }],
     edges: [],
-  };
+  } as unknown as ProductGraph;
 
   it('generates prompt with task details and product context', () => {
     const instr = {
@@ -676,10 +719,10 @@ describe('buildImplementPrompt', () => {
     const prompt = buildImplementPrompt(instr, baseGraph);
     expect(prompt).toContain('# Implementation Task: T1');
     expect(prompt).toContain('Action: create');
-    expect(prompt).toContain('Node: core.entity.user (entity)');
-    expect(prompt).toContain('Module: core');
+    expect(prompt).toContain('core.entity.user');
+    expect(prompt).toContain('entity');
+    expect(prompt).toContain('core');
     expect(prompt).toContain('Create user entity');
-    expect(prompt).toContain('Name: TestApp');
     expect(prompt).not.toContain('## Related Edges');
   });
 

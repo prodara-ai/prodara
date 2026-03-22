@@ -4,6 +4,8 @@ export {
   executeImplementation,
   extractSeams,
   applySeams,
+  extractCodeBlocks,
+  writeImplementationOutput,
 } from './implement.js';
 export type {
   ImplementTask,
@@ -12,4 +14,6 @@ export type {
   ImplementTaskResult,
   SeamRange,
   ImplementAction,
+  CodeBlock,
 } from './types.js';
+export type { ExecuteOptions } from './implement.js';

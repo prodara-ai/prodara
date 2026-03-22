@@ -28,8 +28,10 @@ The `prodara build` command runs the full pipeline including AI-driven implement
 - Supports two modes:
   - **Prompt files** (default) — Generates `.md` prompt files for IDE-based agents (Copilot, Claude, Cursor, etc.)
   - **Headless** (`--headless`) — Sends prompts directly via API to OpenAI, Anthropic, or other providers
+- In headless mode, extracts code blocks from AI responses and writes output files to disk
+- Supports a validate-after-implement retry loop (configurable via `agent.maxImplementRetries`)
 
-Use `--no-implement` to skip the implementation phase.
+Use `--no-implement` to skip the implementation phase. Use `--dry-run` to preview tasks without executing.
 
 ## Programmatic API
 
@@ -203,6 +205,7 @@ npx prodara init                       # Scaffold project (auto-installs compile
 npx prodara init --skip-install        # Scaffold without npm setup
 npx prodara build                      # Full pipeline including AI implementation
 npx prodara build --headless           # Use API driver instead of prompt files
+npx prodara build --dry-run            # Preview implementation tasks without executing
 npx prodara build --no-implement       # Skip implementation phase
 npx prodara validate --format json
 npx prodara graph --output build/graph.json
@@ -212,7 +215,7 @@ npx prodara test
 ## Testing
 
 ```bash
-npm test              # 985 tests
+npm test              # 1,457 tests
 npm run test:coverage # Enforces 100% coverage
 npm run typecheck     # Zero errors
 ```

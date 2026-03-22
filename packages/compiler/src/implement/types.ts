@@ -48,3 +48,9 @@ export interface SeamRange {
   readonly endLine: number;
   readonly content: string;
 }
+
+export interface CodeBlock {
+  readonly language: string;
+  readonly filename: string | null;
+  readonly content: string;
+}

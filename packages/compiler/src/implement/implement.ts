@@ -9,12 +9,15 @@ import type { ProductGraph, ModuleNode, GraphEdge } from '../graph/graph-types.j
 import type { IncrementalSpec } from '../incremental/types.js';
 import type { AgentDriver, AgentRequest, PromptFileOutput } from '../agent/types.js';
 import type { GovernanceRule } from '../governance/types.js';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
 import type {
   ImplementTask,
   ImplementPrompt,
   ImplementPhaseResult,
   ImplementTaskResult,
   SeamRange,
+  CodeBlock,
 } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -131,6 +134,11 @@ export function buildImplementPrompt(
   };
 }
 
+export interface ExecuteOptions {
+  readonly root?: string;
+  readonly dryRun?: boolean;
+}
+
 /**
  * Execute implementation for all tasks using the provided agent driver.
  */
@@ -140,6 +148,7 @@ export async function executeImplementation(
   driver: AgentDriver,
   constitution: string | null,
   governance: string | null,
+  options: ExecuteOptions = {},
 ): Promise<ImplementPhaseResult> {
   const results: ImplementTaskResult[] = [];
   let totalGenerated = 0;
@@ -174,6 +183,19 @@ export async function executeImplementation(
       continue;
     }
 
+    if (options.dryRun) {
+      totalSkipped++;
+      results.push({
+        taskId: prompt.taskId,
+        nodeId: prompt.nodeId,
+        status: 'skipped',
+        platform: driver.platform,
+        duration_ms: 0,
+        outputPath: null,
+      });
+      continue;
+    }
+
     const request: AgentRequest = {
       prompt: prompt.prompt,
       context: {
@@ -190,8 +212,20 @@ export async function executeImplementation(
     const response = await driver.execute(request);
     const duration_ms = Date.now() - start;
 
+    let outputPath: string | null = null;
+
     if (response.status === 'success') {
       totalGenerated++;
+
+      // In headless mode (API driver) with root, extract code blocks and write files
+      if (options.root && driver.platform === 'api') {
+        const blocks = extractCodeBlocks(response.content);
+        if (blocks.length > 0) {
+          const paths = writeImplementationOutput(blocks, options.root, task);
+          /* v8 ignore next -- paths always non-empty when blocks exist */
+          outputPath = paths[0] ?? null;
+        }
+      }
     } else {
       totalFailed++;
     }
@@ -202,7 +236,7 @@ export async function executeImplementation(
       status: response.status,
       platform: driver.platform,
       duration_ms,
-      outputPath: null,
+      outputPath,
     });
   }
 
@@ -293,6 +327,91 @@ export function applySeams(newContent: string, seams: readonly SeamRange[]): str
   }
 
   return result.join('\n');
+}
+
+/**
+ * Extract fenced code blocks from an AI response string.
+ * Supports `// filename: path/to/file.ts` hints on the first line of a block.
+ * Falls back to deriving filename from task context when no hint is present.
+ */
+export function extractCodeBlocks(response: string): CodeBlock[] {
+  const blocks: CodeBlock[] = [];
+  const lines = response.split('\n');
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i]!;
+    const match = /^```(\w*)/.exec(line);
+    if (match) {
+      const language = match[1] || 'text';
+      const contentLines: string[] = [];
+      i++;
+
+      while (i < lines.length && !lines[i]!.startsWith('```')) {
+        contentLines.push(lines[i]!);
+        i++;
+      }
+
+      // Skip closing ```
+      if (i < lines.length) i++;
+
+      // Check for filename hint on first line
+      let filename: string | null = null;
+      const content = contentLines.join('\n');
+      if (contentLines.length > 0) {
+        const hintMatch = /^\/\/\s*filename:\s*(.+)/.exec(contentLines[0]!);
+        if (hintMatch) {
+          filename = hintMatch[1]!.trim();
+        }
+      }
+
+      if (content.trim().length > 0) {
+        blocks.push({ language, filename, content });
+      }
+    } else {
+      i++;
+    }
+  }
+
+  return blocks;
+}
+
+/**
+ * Write extracted code blocks to disk under the specified root directory.
+ * Uses filename hints from responses or falls back to task-derived paths.
+ * Returns the list of written file paths.
+ */
+export function writeImplementationOutput(
+  blocks: readonly CodeBlock[],
+  root: string,
+  task: ImplementTask,
+): string[] {
+  const written: string[] = [];
+  const extMap: Record<string, string> = {
+    typescript: '.ts', javascript: '.js', ts: '.ts', js: '.js',
+    python: '.py', py: '.py', java: '.java', css: '.css',
+    html: '.html', json: '.json', yaml: '.yml', yml: '.yml',
+    sql: '.sql', rust: '.rs', go: '.go', text: '.txt',
+  };
+
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]!;
+    let filePath: string;
+
+    if (block.filename) {
+      filePath = join(root, block.filename);
+    } else {
+      const ext = extMap[block.language] ?? `.${block.language}`;
+      const suffix = blocks.length > 1 ? `-${i}` : '';
+      filePath = join(root, 'src', task.module, `${task.nodeId}${suffix}${ext}`);
+    }
+
+    mkdirSync(dirname(filePath), { recursive: true });
+    writeFileSync(filePath, block.content, 'utf-8');
+    written.push(filePath);
+  }
+
+  return written;
 }
 
 // ---------------------------------------------------------------------------

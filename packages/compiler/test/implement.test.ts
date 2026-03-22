@@ -9,8 +9,13 @@ import {
   executeImplementation,
   extractSeams,
   applySeams,
+  extractCodeBlocks,
+  writeImplementationOutput,
 } from '../src/implement/implement.js';
-import type { ImplementTask, ImplementPrompt } from '../src/implement/types.js';
+import type { ImplementTask, ImplementPrompt, CodeBlock } from '../src/implement/types.js';
+import { mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import type { ProductGraph } from '../src/graph/graph-types.js';
 import type { IncrementalSpec } from '../src/incremental/types.js';
 import type { AgentDriver, AgentResponse } from '../src/agent/types.js';
@@ -382,6 +387,58 @@ describe('executeImplementation', () => {
       }),
     }));
   });
+
+  it('skips tasks in dryRun mode', async () => {
+    const tasks: ImplementTask[] = [
+      { taskId: 't1', nodeId: 'ent_user', module: 'core', action: 'generate', nodeKind: 'entity', context: 'new', relatedEdges: [], fieldDefinitions: [] },
+    ];
+    const prompts = [makePrompt('t1', 'ent_user')];
+    const driver = makeDriver();
+
+    const result = await executeImplementation(tasks, prompts, driver, null, null, { dryRun: true });
+    expect(result.totalSkipped).toBe(1);
+    expect(result.totalGenerated).toBe(0);
+    expect(result.tasks[0]!.status).toBe('skipped');
+    expect(driver.execute).not.toHaveBeenCalled();
+  });
+
+  it('writes code blocks to disk in API mode with root', async () => {
+    const testRoot = join(tmpdir(), `prodara-exec-test-${Date.now()}`);
+    const tasks: ImplementTask[] = [
+      { taskId: 't1', nodeId: 'ent_user', module: 'core', action: 'generate', nodeKind: 'entity', context: 'new', relatedEdges: [], fieldDefinitions: [] },
+    ];
+    const prompts = [makePrompt('t1', 'ent_user')];
+    const codeResponse: AgentResponse = {
+      content: '```ts\n// filename: src/core/user.ts\nexport class User {}\n```',
+      status: 'success',
+      metadata: { platform: 'api', duration_ms: 50, tokens_used: 10, model: 'gpt-4o' },
+    };
+    const driver = makeDriver([codeResponse]);
+
+    const result = await executeImplementation(tasks, prompts, driver, null, null, { root: testRoot });
+    expect(result.totalGenerated).toBe(1);
+    expect(result.tasks[0]!.outputPath).toContain('user.ts');
+    const content = readFileSync(result.tasks[0]!.outputPath!, 'utf-8');
+    expect(content).toContain('export class User');
+  });
+
+  it('handles API mode with root when response has no code blocks', async () => {
+    const testRoot = join(tmpdir(), `prodara-exec-nocode-${Date.now()}`);
+    const tasks: ImplementTask[] = [
+      { taskId: 't1', nodeId: 'ent_user', module: 'core', action: 'generate', nodeKind: 'entity', context: 'new', relatedEdges: [], fieldDefinitions: [] },
+    ];
+    const prompts = [makePrompt('t1', 'ent_user')];
+    const textResponse: AgentResponse = {
+      content: 'Here is a description without any code blocks.',
+      status: 'success',
+      metadata: { platform: 'api', duration_ms: 30, tokens_used: 5, model: 'gpt-4o' },
+    };
+    const driver = makeDriver([textResponse]);
+
+    const result = await executeImplementation(tasks, prompts, driver, null, null, { root: testRoot });
+    expect(result.totalGenerated).toBe(1);
+    expect(result.tasks[0]!.outputPath).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -531,5 +588,111 @@ describe('applySeams', () => {
     const result = applySeams(newContent, saved);
     expect(result).toContain('default code here');
     expect(result).toContain('PRODARA SEAM START unmatched');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// extractCodeBlocks
+// ---------------------------------------------------------------------------
+
+describe('extractCodeBlocks', () => {
+  it('extracts a single fenced code block', () => {
+    const response = '```ts\nconst x = 1;\n```';
+    const blocks = extractCodeBlocks(response);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]!.language).toBe('ts');
+    expect(blocks[0]!.content).toBe('const x = 1;');
+    expect(blocks[0]!.filename).toBeNull();
+  });
+
+  it('extracts multiple code blocks', () => {
+    const response = 'Some text\n```typescript\nfoo();\n```\nMore text\n```javascript\nbar();\n```';
+    const blocks = extractCodeBlocks(response);
+    expect(blocks).toHaveLength(2);
+    expect(blocks[0]!.language).toBe('typescript');
+    expect(blocks[1]!.language).toBe('javascript');
+  });
+
+  it('parses filename hints', () => {
+    const response = '```ts\n// filename: src/utils.ts\nexport function greet() {}\n```';
+    const blocks = extractCodeBlocks(response);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]!.filename).toBe('src/utils.ts');
+  });
+
+  it('defaults language to text when absent', () => {
+    const response = '```\nplain content\n```';
+    const blocks = extractCodeBlocks(response);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]!.language).toBe('text');
+  });
+
+  it('skips empty code blocks', () => {
+    const response = '```ts\n   \n```';
+    const blocks = extractCodeBlocks(response);
+    expect(blocks).toHaveLength(0);
+  });
+
+  it('returns empty array for no code blocks', () => {
+    const blocks = extractCodeBlocks('just some text\nno blocks here');
+    expect(blocks).toHaveLength(0);
+  });
+
+  it('handles unclosed code block', () => {
+    const response = '```ts\nconst x = 1;';
+    const blocks = extractCodeBlocks(response);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]!.content).toBe('const x = 1;');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// writeImplementationOutput
+// ---------------------------------------------------------------------------
+
+describe('writeImplementationOutput', () => {
+  const TEST_ROOT = join(tmpdir(), `prodara-impl-test-${Date.now()}`);
+  const task: ImplementTask = {
+    taskId: 't1',
+    nodeId: 'user',
+    module: 'core',
+    action: 'generate' as const,
+    nodeKind: 'entity',
+    context: 'new',
+    relatedEdges: [],
+    fieldDefinitions: [],
+  };
+
+  it('writes block with filename hint', () => {
+    const blocks: CodeBlock[] = [{ language: 'ts', filename: 'src/core/user.ts', content: 'export class User {}' }];
+    const written = writeImplementationOutput(blocks, TEST_ROOT, task);
+    expect(written).toHaveLength(1);
+    expect(written[0]).toContain('user.ts');
+    const content = readFileSync(written[0]!, 'utf-8');
+    expect(content).toBe('export class User {}');
+  });
+
+  it('derives path from task when no filename hint', () => {
+    const blocks: CodeBlock[] = [{ language: 'typescript', filename: null, content: 'code here' }];
+    const written = writeImplementationOutput(blocks, TEST_ROOT, task);
+    expect(written).toHaveLength(1);
+    expect(written[0]).toContain(join('src', 'core', 'user.ts'));
+  });
+
+  it('appends suffix for multiple blocks without filenames', () => {
+    const blocks: CodeBlock[] = [
+      { language: 'ts', filename: null, content: 'block 0' },
+      { language: 'ts', filename: null, content: 'block 1' },
+    ];
+    const written = writeImplementationOutput(blocks, TEST_ROOT, task);
+    expect(written).toHaveLength(2);
+    expect(written[0]).toContain('user-0.ts');
+    expect(written[1]).toContain('user-1.ts');
+  });
+
+  it('uses language fallback extension for unknown languages', () => {
+    const blocks: CodeBlock[] = [{ language: 'kotlin', filename: null, content: 'fun main()' }];
+    const written = writeImplementationOutput(blocks, TEST_ROOT, task);
+    expect(written[0]).toContain('.kotlin');
   });
 });

@@ -68,7 +68,8 @@ program
   .option('--auto-commit', 'Auto-commit changes after successful build')
   .option('--notify', 'Send desktop notification on build completion')
   .option('--party', 'Run multi-agent party mode review')
-  .action((path: string, opts: {
+  .option('--dry-run', 'Show implementation tasks without executing')
+  .action(async (path: string, opts: {
     format: string;
     headless?: boolean;
     implement?: boolean;
@@ -78,6 +79,7 @@ program
     autoCommit?: boolean;
     notify?: boolean;
     party?: boolean;
+    dryRun?: boolean;
   }) => {
     const root = resolve(path);
     registerShutdownHandlers();
@@ -92,6 +94,7 @@ program
       headless: opts.headless ?? false,
       noImplement: opts.implement === false,
       noReview: opts.review === false,
+      dryRun: opts.dryRun ?? false,
       onProgress: (phase: PhaseName, index: number, total: number) => {
         if (opts.format !== 'json') {
           process.stderr.write(`[${index + 1}/${total}] ${phase}...\n`);
@@ -99,13 +102,14 @@ program
       },
     };
 
-    const result = runPipeline(root, config, pipelineOpts);
+    const result = await runPipeline(root, config, pipelineOpts);
 
     if (opts.format === 'json') {
       process.stdout.write(JSON.stringify({
         status: result.status,
         phases: result.phases.map((p) => ({ phase: p.phase, status: p.status, detail: p.detail, duration_ms: p.duration_ms })),
         duration_ms: result.duration_ms,
+        implementResult: result.implementResult ?? undefined,
       }, null, 2) + '\n');
     } else {
       for (const p of result.phases) {

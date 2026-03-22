@@ -402,7 +402,7 @@ module todo {
     {
       icon: '&#x2699;&#xFE0F;',
       title: 'Compiler & CLI',
-      desc: '15-phase compiler pipeline with type checking, semantic validation, and graph building. Produces deterministic Product Graphs, incremental plans, and impact analysis.',
+      desc: '13-phase compiler pipeline with type checking, semantic validation, and graph building. Produces deterministic Product Graphs, incremental plans, and AI-driven implementation.',
     },
     {
       icon: '&#x1F4BB;',
@@ -434,7 +434,7 @@ module todo {
     {
       num: '2',
       title: 'Build & Implement',
-      desc: 'The compiler validates your spec through 15 phases, then dispatches implementation tasks to your AI agent. In headless mode, agents build directly via API - no UI needed.',
+      desc: 'The compiler validates your spec through 13 phases, then dispatches implementation tasks to your AI agent. In headless mode, agents build directly via API - no UI needed. Use --dry-run to preview tasks.',
       cmd: 'prodara build .',
     },
     {
@@ -454,7 +454,7 @@ module todo {
 
   readonly agentUserReasons = [
     { title: 'Deterministic builds', desc: 'Same spec always produces the same Product Graph. No hallucinated drift between runs - verified by SHA-256 hashing.' },
-    { title: 'Compiler-validated specs', desc: 'A full 15-phase compiler catches mistakes before they reach generated code. Suggested fixes let agents self-correct in a loop.' },
+    { title: 'Compiler-validated specs', desc: 'A full 13-phase compiler catches mistakes before they reach generated code. Suggested fixes let agents self-correct in a loop.' },
     { title: 'Semantic diffing & impact analysis', desc: 'When you change a spec, Prodara traces 40+ edge types to tell you exactly which downstream artifacts need updating - with depth tracking.' },
     { title: 'Governance as code', desc: 'Constitutions enforce security, privacy, and compliance policies. 9 built-in reviewers plus custom reviewers catch issues automatically.' },
   ];
