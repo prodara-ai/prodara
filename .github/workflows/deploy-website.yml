@@ -34,7 +34,7 @@ jobs:
 
       - name: Build
         working-directory: website
-        run: npx ng build --base-href /prodara/
+        run: npx ng build
 
       - name: Add 404 fallback for SPA routing
         run: cp website/dist/website/browser/index.html website/dist/website/browser/404.html
