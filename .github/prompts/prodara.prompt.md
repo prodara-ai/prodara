@@ -1,5 +1,5 @@
 ---
-mode: agent
+name: Prodara
 description: "Build products with Prodara — the AI agent handles everything"
 ---
 

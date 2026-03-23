@@ -599,6 +599,7 @@ describe('init command', () => {
       const program = createProgram();
       await runCommand(program, ['init', '.', '--name', 'test_app', '--skip-install']);
       expect(stdoutOutput).toContain('cd .');
+      expect(stdoutOutput).toContain('/prodara');
       expect(process.exitCode).toBe(0);
     } finally {
       process.chdir(originalDir);

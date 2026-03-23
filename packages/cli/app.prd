@@ -6,10 +6,4 @@ product my_app {
 
 module core {
 
-  entity item {
-    id: uuid
-    title: string
-    done: boolean = false
-  }
-
 }

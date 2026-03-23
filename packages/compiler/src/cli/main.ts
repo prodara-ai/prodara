@@ -336,8 +336,8 @@ module core {
 
     process.stdout.write('\n' + box('Next Steps', [
       `${bold('cd')} ${root === resolve('.') ? '.' : root}`,
-      `${bold('prodara build')} — compile and validate your spec`,
-      `${bold('prodara doctor')} — check your installation`,
+      `Use the ${bold('/prodara')} slash command in your AI agent`,
+      `Example: ${dim('/prodara build a todo application')}`,
     ]) + '\n');
     process.exitCode = 0;
   });
