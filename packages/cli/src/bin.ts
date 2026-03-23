@@ -15,10 +15,12 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { resolveLocal, checkVersionCompatibility } from './resolve.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const require = createRequire(import.meta.url);
 
 function getWrapperVersion(): string {
   const pkgPath = resolve(__dirname, '..', 'package.json');
@@ -34,18 +36,59 @@ function getWrapperVersion(): string {
   return '0.0.0';
 }
 
-function main(): void {
+/**
+ * Resolve the CLI entry from the compiler bundled inside @prodara/cli's own
+ * node_modules.  Uses createRequire for maximum Node.js compatibility.
+ */
+function resolveBundledCompiler(): string | null {
+  try {
+    // Resolve the compiler package.json first, then derive the CLI entry
+    const pkgPath = require.resolve('@prodara/compiler/package.json');
+    const entry = resolve(dirname(pkgPath), 'dist', 'cli', 'main.js');
+    if (existsSync(entry)) return entry;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function main(): void {
   const cwd = process.cwd();
   const local = resolveLocal(cwd);
   const wrapperVersion = getWrapperVersion();
 
+  const args = process.argv.slice(2);
+
   if (!local) {
+    // Special-case: `prodara init` bootstraps a project even without a local
+    // compiler by delegating to the compiler bundled inside @prodara/cli's
+    // own node_modules (it's a production dependency).
+    if (args[0] === 'init') {
+      const bundledEntry = resolveBundledCompiler();
+      if (bundledEntry) {
+        try {
+          execFileSync(process.execPath, [bundledEntry, ...args], {
+            cwd,
+            stdio: 'inherit',
+            env: process.env,
+          });
+        } catch (err: unknown) {
+          if (err && typeof err === 'object' && 'status' in err) {
+            process.exitCode = (err as { status: number }).status;
+          } else {
+            process.exitCode = 1;
+          }
+        }
+        return;
+      }
+      // Bundled compiler missing (shouldn't happen) — fall through to error
+    }
+
     process.stderr.write(
       'Error: Could not find a local installation of @prodara/compiler.\n' +
       '\n' +
       'To set up a Prodara project:\n' +
-      '  npm install --save-dev @prodara/compiler\n' +
-      '  npx prodara init\n' +
+      '  prodara init\n' +
       '\n' +
       `@prodara/cli v${wrapperVersion}\n`,
     );
@@ -74,7 +117,6 @@ function main(): void {
   }
 
   // Delegate to the local compiler CLI
-  const args = process.argv.slice(2);
   try {
     execFileSync(process.execPath, [local.cliEntry, ...args], {
       cwd,
@@ -91,4 +133,7 @@ function main(): void {
   }
 }
 
-main();
+/* v8 ignore next 3 -- auto-invoked entry point */
+if (process.argv[1] && resolve(process.argv[1]) === __filename) {
+  main();
+}

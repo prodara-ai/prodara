@@ -68,6 +68,10 @@ const mockGenerateSlashCommands = vi.fn();
 const mockWriteSlashCommands = vi.fn();
 const mockGetAgentConfig = vi.fn();
 const mockExecSync = vi.fn();
+const mockSelect = vi.fn();
+
+// UI module mocks — identity functions so existing assertions stay stable
+const mockIsInteractive = vi.fn().mockReturnValue(false);
 
 vi.mock('node:child_process', () => ({
   execSync: (...args: unknown[]) => mockExecSync(...args),
@@ -228,6 +232,36 @@ vi.mock('../src/audit/audit.js', async (importOriginal) => {
 vi.mock('../src/agent/party.js', () => ({
   runParty: (...args: unknown[]) => mockRunParty(...args),
   formatPartyHuman: (...args: unknown[]) => mockFormatPartyHuman(...args),
+}));
+
+vi.mock('../src/cli/ui.js', () => ({
+  banner: (text: string) => `[BANNER:${text}]`,
+  success: (msg: string) => `✓ ${msg}`,
+  error: (msg: string) => `✗ ${msg}`,
+  warn: (msg: string) => `⚠ ${msg}`,
+  info: (msg: string) => `ℹ ${msg}`,
+  phaseIcon: (s: string) => s === 'ok' ? '✓' : s === 'warn' ? '⚠' : s === 'error' ? '✗' : '○',
+  bold: (msg: string) => msg,
+  dim: (msg: string) => msg,
+  green: (msg: string) => msg,
+  red: (msg: string) => msg,
+  yellow: (msg: string) => msg,
+  cyan: (msg: string) => msg,
+  box: (title: string, lines: string[]) => `[BOX:${title}]\n${lines.join('\n')}`,
+  table: (_h: string[], rows: string[][]) => rows.map(r => '  ' + r.join('  ')).join('\n'),
+  isInteractive: () => mockIsInteractive(),
+  createSpinner: (text: string) => ({
+    text,
+    start(t?: string) { if (t) this.text = t; return this; },
+    succeed(t?: string) { if (t) this.text = t; return this; },
+    fail(t?: string) { if (t) this.text = t; return this; },
+    stop() { return this; },
+  }),
+  stripAnsi: (s: string) => s,
+}));
+
+vi.mock('@inquirer/prompts', () => ({
+  select: (...args: unknown[]) => mockSelect(...args),
 }));
 
 // ---------------------------------------------------------------------------
@@ -422,7 +456,7 @@ describe('build command', () => {
     await runCommand(program, ['build', '.']);
     expect(mockRunPipeline).toHaveBeenCalled();
     expect(stdoutOutput).toContain('✓');
-    expect(stdoutOutput).toContain('Build success');
+    expect(stdoutOutput).toContain('Build completed');
     expect(process.exitCode).toBe(0);
   });
 
@@ -535,9 +569,26 @@ describe('init command', () => {
     try {
       const program = createProgram();
       await runCommand(program, ['init', tmpDir, '--name', 'test_app']);
-      expect(stdoutOutput).toContain('Initialized');
+      expect(stdoutOutput).toContain('Created app.prd');
       expect(process.exitCode).toBe(0);
     } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('uses "." in next-steps when path is current directory', async () => {
+    const { mkdtempSync, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    const originalDir = process.cwd();
+    try {
+      process.chdir(tmpDir);
+      const program = createProgram();
+      await runCommand(program, ['init', '.', '--name', 'test_app', '--skip-install']);
+      expect(stdoutOutput).toContain('cd .');
+      expect(process.exitCode).toBe(0);
+    } finally {
+      process.chdir(originalDir);
       rmSync(tmpDir, { recursive: true, force: true });
     }
   });
@@ -550,7 +601,7 @@ describe('init command', () => {
       const program = createProgram();
       await runCommand(program, ['init', tmpDir, '--name', 'test_app']);
       expect(mockExecSync).toHaveBeenCalledWith('npm init -y', expect.objectContaining({ cwd: expect.stringContaining(tmpDir) }));
-      expect(stdoutOutput).toContain('Initializing npm project');
+      expect(stdoutOutput).toContain('Created app.prd');
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
@@ -564,7 +615,7 @@ describe('init command', () => {
       const program = createProgram();
       await runCommand(program, ['init', tmpDir, '--name', 'test_app']);
       expect(mockExecSync).toHaveBeenCalledWith('npm install --save-dev @prodara/compiler', expect.objectContaining({ cwd: expect.stringContaining(tmpDir) }));
-      expect(stdoutOutput).toContain('Installing @prodara/compiler');
+      expect(stdoutOutput).toContain('Created app.prd');
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
@@ -593,7 +644,7 @@ describe('init command', () => {
       const program = createProgram();
       await runCommand(program, ['init', tmpDir, '--name', 'test_app', '--skip-install']);
       expect(mockExecSync).not.toHaveBeenCalled();
-      expect(stdoutOutput).toContain('Initialized');
+      expect(stdoutOutput).toContain('Created app.prd');
       expect(process.exitCode).toBe(0);
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
@@ -608,7 +659,7 @@ describe('init command', () => {
     try {
       const program = createProgram();
       await runCommand(program, ['init', tmpDir, '--name', 'test_app']);
-      expect(stderrOutput).toContain('Failed to initialize npm project');
+      expect(stderrOutput).toContain('npm init');
       expect(process.exitCode).toBe(1);
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
@@ -624,8 +675,8 @@ describe('init command', () => {
     try {
       const program = createProgram();
       await runCommand(program, ['init', tmpDir, '--name', 'test_app']);
-      expect(stderrOutput).toContain('Failed to install @prodara/compiler');
-      expect(stdoutOutput).toContain('Initialized');
+      expect(stderrOutput).toContain('Install it manually');
+      expect(stdoutOutput).toContain('Created app.prd');
       expect(process.exitCode).toBe(0);
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
@@ -901,7 +952,7 @@ describe('doctor command', () => {
     mockDiscoverFiles.mockReturnValue(['/tmp/app.prd']);
     const program = createProgram();
     await runCommand(program, ['doctor', '.']);
-    expect(stdoutOutput).toContain('Prodara Compiler');
+    expect(stdoutOutput).toContain('Prodara Doctor');
     expect(stdoutOutput).toContain('Node.js');
     expect(stdoutOutput).toContain('1 .prd file(s)');
     expect(process.exitCode).toBe(0);
@@ -1580,7 +1631,7 @@ describe('init command — template', () => {
       await runCommand(program, ['init', tmpDir, '--template', 'minimal', '--name', 'test_app']);
       expect(stdoutOutput).toContain('Initialized');
       expect(stdoutOutput).toContain('template: minimal');
-      expect(stdoutOutput).toContain('Created app.prd');
+      expect(stdoutOutput).toContain('app.prd');
       expect(fsRead(join(tmpDir, 'app.prd'), 'utf-8')).toBe('product test {}');
       expect(process.exitCode).toBe(0);
     } finally {
@@ -1654,6 +1705,66 @@ describe('init command — AI agent', () => {
       await runCommand(program, ['init', tmpDir, '--name', 'test_app', '--ai', 'generic']);
       expect(stderrOutput).toContain('--ai generic requires --ai-commands-dir');
       expect(process.exitCode).toBe(1);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('prompts for agent interactively when --ai not provided', async () => {
+    const { mkdtempSync, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-init-ai-'));
+    try {
+      mockIsInteractive.mockReturnValue(true);
+      mockSelect.mockResolvedValue('copilot');
+      mockIsValidAgentId.mockReturnValue(true);
+      mockListSupportedAgents.mockReturnValue(['copilot', 'claude', 'cursor', 'gemini', 'windsurf']);
+      mockGenerateSlashCommands.mockReturnValue([
+        { path: join(tmpDir, '.copilot/commands/build.md'), content: 'Build' },
+      ]);
+      mockGetAgentConfig.mockReturnValue({ commandsDir: '.copilot/commands' });
+      const program = createProgram();
+      await runCommand(program, ['init', tmpDir, '--name', 'test_app', '--skip-install']);
+      expect(mockSelect).toHaveBeenCalledWith(expect.objectContaining({ message: 'Which AI agent do you use?' }));
+      expect(mockWriteSlashCommands).toHaveBeenCalled();
+      expect(stdoutOutput).toContain('Created slash commands');
+      expect(process.exitCode).toBe(0);
+    } finally {
+      mockIsInteractive.mockReturnValue(false);
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('skips agent setup when user selects "skip" interactively', async () => {
+    const { mkdtempSync, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-init-ai-'));
+    try {
+      mockIsInteractive.mockReturnValue(true);
+      mockSelect.mockResolvedValue('skip');
+      mockListSupportedAgents.mockReturnValue(['copilot']);
+      const program = createProgram();
+      await runCommand(program, ['init', tmpDir, '--name', 'test_app', '--skip-install']);
+      expect(mockWriteSlashCommands).not.toHaveBeenCalled();
+      expect(stdoutOutput).not.toContain('Created slash commands');
+      expect(process.exitCode).toBe(0);
+    } finally {
+      mockIsInteractive.mockReturnValue(false);
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('skips agent setup silently in non-interactive mode without --ai', async () => {
+    const { mkdtempSync, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-init-ai-'));
+    try {
+      mockIsInteractive.mockReturnValue(false);
+      const program = createProgram();
+      await runCommand(program, ['init', tmpDir, '--name', 'test_app', '--skip-install']);
+      expect(mockSelect).not.toHaveBeenCalled();
+      expect(mockWriteSlashCommands).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(0);
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }

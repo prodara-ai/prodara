@@ -26,6 +26,7 @@ import { explainNode, collectAllNodeIds, formatExplanation, getDiagnosticInfo } 
 import { registerShutdownHandlers, setActiveRoot, clearActiveRoot } from './lifecycle.js';
 import { generateSlashCommands, writeSlashCommands, isValidAgentId, listSupportedAgents, getAgentConfig } from './agent-setup.js';
 import type { AgentId } from './agent-setup.js';
+import { banner, success, error as uiError, warn as uiWarn, info as uiInfo, phaseIcon, box, table, dim, bold, isInteractive, createSpinner } from './ui.js';
 import { createProposal, listProposals, applyProposal, archiveProposal, getProposal } from '../proposal/proposal.js';
 import { generateChecklist, formatChecklistHuman } from './checklist.js';
 import { analyzeGraph, formatAnalysisHuman } from './analyze.js';
@@ -97,10 +98,14 @@ program
       dryRun: opts.dryRun ?? false,
       onProgress: (phase: PhaseName, index: number, total: number) => {
         if (opts.format !== 'json') {
-          process.stderr.write(`[${index + 1}/${total}] ${phase}...\n`);
+          process.stderr.write(`${uiInfo(`[${index + 1}/${total}] ${phase}...`)}\n`);
         }
       },
     };
+
+    if (opts.format !== 'json') {
+      process.stdout.write(banner('Prodara Build') + '\n\n');
+    }
 
     const result = await runPipeline(root, config, pipelineOpts);
 
@@ -112,11 +117,17 @@ program
         implementResult: result.implementResult ?? undefined,
       }, null, 2) + '\n');
     } else {
-      for (const p of result.phases) {
-        const icon = p.status === 'ok' ? '✓' : p.status === 'warn' ? '⚠' : p.status === 'error' ? '✗' : '○';
-        process.stdout.write(`  ${icon} ${p.phase}: ${p.detail}\n`);
+      const phaseRows = result.phases.map(p => [
+        `${phaseIcon(p.status)} ${p.phase}`,
+        p.detail,
+        dim(`${p.duration_ms}ms`),
+      ]);
+      process.stdout.write(table(['Phase', 'Detail', 'Time'], phaseRows) + '\n\n');
+      if (result.status === 'success') {
+        process.stdout.write(box('Build Result', [success(`Build completed in ${result.duration_ms}ms`)]) + '\n');
+      } else {
+        process.stdout.write(box('Build Result', [uiError(`Build failed (${result.duration_ms}ms)`)]) + '\n');
       }
-      process.stdout.write(`\nBuild ${result.status} (${result.duration_ms}ms)\n`);
     }
 
     clearActiveRoot();
@@ -126,7 +137,7 @@ program
       /* v8 ignore next -- graph always exists when status is success */
       const hash = autoCommit(root, result.graph?.product.name ?? 'unknown', result.phases.length);
       if (hash && opts.format !== 'json') {
-        process.stdout.write(`Auto-committed: ${hash}\n`);
+        process.stdout.write(success(`Auto-committed: ${hash}`) + '\n');
       }
     }
 
@@ -156,17 +167,19 @@ program
   .option('--ai <agent>', 'Configure AI agent slash commands (e.g. copilot, claude, cursor)')
   .option('--ai-commands-dir <dir>', 'Custom directory for slash commands (use with --ai generic)')
   .option('--skip-install', 'Skip automatic npm init and compiler installation')
-  .action((path: string, opts: { name: string; template?: string; ai?: string; aiCommandsDir?: string; skipInstall?: boolean }) => {
+  .action(async (path: string, opts: { name: string; template?: string; ai?: string; aiCommandsDir?: string; skipInstall?: boolean }) => {
     const root = resolve(path);
     const appPrd = join(root, 'app.prd');
     const configFile = join(root, CONFIG_FILENAME);
     const prodaraDir = join(root, '.prodara');
 
     if (existsSync(appPrd)) {
-      process.stderr.write(`Already initialized: ${appPrd} exists\n`);
+      process.stderr.write(uiError(`Already initialized: ${appPrd} exists`) + '\n');
       process.exitCode = 1;
       return;
     }
+
+    process.stdout.write(banner('Prodara Init') + '\n\n');
 
     mkdirSync(root, { recursive: true });
 
@@ -174,24 +187,25 @@ program
     if (!opts.skipInstall) {
       const pkgJsonPath = join(root, 'package.json');
       if (!existsSync(pkgJsonPath)) {
-        process.stdout.write('Initializing npm project...\n');
+        const spinner = createSpinner('Initializing npm project...').start();
         try {
           execSync('npm init -y', { cwd: root, stdio: 'pipe' });
-          process.stdout.write('  Created package.json\n');
+          spinner.succeed('Created package.json');
         } catch {
-          process.stderr.write('Error: Failed to initialize npm project. Run `npm init` manually.\n');
+          spinner.fail('Failed to initialize npm project');
+          process.stderr.write(uiError('Run `npm init` manually.') + '\n');
           process.exitCode = 1;
           return;
         }
       }
 
-      process.stdout.write('Installing @prodara/compiler...\n');
+      const installSpinner = createSpinner('Installing @prodara/compiler...').start();
       try {
         execSync('npm install --save-dev @prodara/compiler', { cwd: root, stdio: 'pipe' });
-        process.stdout.write('  Installed @prodara/compiler\n');
+        installSpinner.succeed('Installed @prodara/compiler');
       } catch {
-        process.stderr.write('Warning: Failed to install @prodara/compiler. Install it manually:\n');
-        process.stderr.write('  npm install --save-dev @prodara/compiler\n');
+        installSpinner.fail('Failed to install @prodara/compiler');
+        process.stderr.write(uiWarn('Install it manually: npm install --save-dev @prodara/compiler') + '\n');
       }
     }
 
@@ -203,8 +217,8 @@ program
       const tmpl = getStarterTemplate(opts.template, opts.name);
       if (!tmpl) {
         const available = listStarterTemplates().map(t => t.name).join(', ');
-        process.stderr.write(`Unknown template: ${opts.template}\n`);
-        process.stderr.write(`Available templates: ${available}\n`);
+        process.stderr.write(uiError(`Unknown template: ${opts.template}`) + '\n');
+        process.stderr.write(uiInfo(`Available templates: ${available}`) + '\n');
         process.exitCode = 1;
         return;
       }
@@ -213,9 +227,9 @@ program
         mkdirSync(dirname(filePath), { recursive: true });
         writeFileSync(filePath, f.content, 'utf-8');
       }
-      process.stdout.write(`Initialized Prodara project in ${root} (template: ${tmpl.name})\n`);
+      process.stdout.write(success(`Initialized Prodara project (template: ${tmpl.name})`) + '\n');
       for (const f of tmpl.files) {
-        process.stdout.write(`  Created ${f.path}\n`);
+        process.stdout.write(`  ${success(f.path)}\n`);
       }
     } else {
       writeFileSync(appPrd, `product ${opts.name} {
@@ -234,8 +248,7 @@ module core {
 
 }
 `, 'utf-8');
-      process.stdout.write(`Initialized Prodara project in ${root}\n`);
-      process.stdout.write(`  Created app.prd\n`);
+      process.stdout.write(success('Created app.prd') + '\n');
     }
 
     writeFileSync(configFile, JSON.stringify({
@@ -246,23 +259,41 @@ module core {
       audit: { enabled: true, path: '.prodara/runs/' },
     }, null, 2) + '\n', 'utf-8');
 
-    process.stdout.write(`  Created ${CONFIG_FILENAME}\n`);
-    process.stdout.write(`  Created .prodara/\n`);
+    process.stdout.write(success(`Created ${CONFIG_FILENAME}`) + '\n');
+    process.stdout.write(success('Created .prodara/') + '\n');
 
-    // Slash command generation
+    // Slash command generation — interactive prompt if --ai not provided
+    let agentId: AgentId | null = null;
+
     if (opts.ai) {
       if (!isValidAgentId(opts.ai)) {
         const supported = listSupportedAgents().join(', ');
-        process.stderr.write(`Unknown AI agent: ${opts.ai}\n`);
-        process.stderr.write(`Supported agents: ${supported}\n`);
+        process.stderr.write(uiError(`Unknown AI agent: ${opts.ai}`) + '\n');
+        process.stderr.write(uiInfo(`Supported agents: ${supported}`) + '\n');
         process.exitCode = 1;
         return;
       }
+      agentId = opts.ai as AgentId;
+    } else if (isInteractive()) {
+      const { select } = await import('@inquirer/prompts');
+      const agents = listSupportedAgents();
+      const popular: AgentId[] = ['copilot', 'claude', 'cursor', 'gemini'];
+      const others = agents.filter(a => !popular.includes(a) && a !== 'generic');
+      const choices = [
+        ...popular.map(a => ({ name: a.charAt(0).toUpperCase() + a.slice(1), value: a })),
+        ...others.map(a => ({ name: a.charAt(0).toUpperCase() + a.slice(1), value: a })),
+        { name: 'Generic', value: 'generic' as AgentId },
+        { name: 'Skip (no agent setup)', value: 'skip' as string },
+      ];
+      const selected = await select<string>({ message: 'Which AI agent do you use?', choices });
+      if (selected !== 'skip') {
+        agentId = selected as AgentId;
+      }
+    }
 
-      const agentId = opts.ai as AgentId;
-
+    if (agentId) {
       if (agentId === 'generic' && !opts.aiCommandsDir) {
-        process.stderr.write(`--ai generic requires --ai-commands-dir <dir>\n`);
+        process.stderr.write(uiError('--ai generic requires --ai-commands-dir <dir>') + '\n');
         process.exitCode = 1;
         return;
       }
@@ -273,14 +304,18 @@ module core {
       const agentConfig = getAgentConfig(agentId);
       /* v8 ignore next -- triple fallback for command dir */
       const commandsDir = opts.aiCommandsDir ?? agentConfig?.commandsDir ?? '.ai/commands';
-      process.stdout.write(`  Created slash commands in ${commandsDir}/\n`);
+      process.stdout.write(success(`Created slash commands in ${commandsDir}/`) + '\n');
       for (const cmd of commands) {
         const rel = relative(root, cmd.path);
-        process.stdout.write(`    ${rel}\n`);
+        process.stdout.write(`  ${dim(rel)}\n`);
       }
     }
 
-    process.stdout.write(`\nRun \`prodara build\` to compile.\n`);
+    process.stdout.write('\n' + box('Next Steps', [
+      `${bold('cd')} ${root === resolve('.') ? '.' : root}`,
+      `${bold('prodara build')} — compile and validate your spec`,
+      `${bold('prodara doctor')} — check your installation`,
+    ]) + '\n');
     process.exitCode = 0;
   });
 
@@ -296,6 +331,9 @@ program
     const root = resolve(path);
     const result = compile(root, { stopAfter: 'validate' });
     outputDiagnostics(result.diagnostics, opts.format);
+    if (!result.diagnostics.hasErrors && opts.format !== 'json') {
+      process.stdout.write(success('No errors found') + '\n');
+    }
     process.exitCode = result.diagnostics.hasErrors ? 1 : 0;
   });
 
@@ -322,7 +360,7 @@ program
       if (opts.output) {
         writeFileSync(resolve(opts.output), result.graphJson, 'utf-8');
         if (opts.format !== 'json') {
-          process.stderr.write(`Graph written to ${opts.output}\n`);
+          process.stderr.write(success(`Graph written to ${opts.output}`) + '\n');
         }
       } else {
         process.stdout.write(result.graphJson + '\n');
@@ -378,7 +416,7 @@ program
         const r = result.testResults;
         process.stdout.write(`Tests: ${r.totalPassed} passed, ${r.totalFailed} failed\n`);
         for (const t of r.results) {
-          const icon = t.passed ? '✓' : '✗';
+          const icon = t.passed ? phaseIcon('ok') : phaseIcon('error');
           process.stdout.write(`  ${icon} ${t.name}\n`);
           for (const f of t.failures) {
             process.stdout.write(`    ${f}\n`);
@@ -417,7 +455,7 @@ program
     if (opts.semantic) {
       const prevGraph = readPreviousGraph(root);
       if (!prevGraph) {
-        process.stdout.write('No previous graph found — nothing to diff.\n');
+        process.stdout.write(uiInfo('No previous graph found — nothing to diff.') + '\n');
         process.exitCode = 0;
         return;
       }
@@ -461,12 +499,14 @@ program
   .action((path: string) => {
     const root = resolve(path);
     const files = discoverFiles(root);
-    process.stdout.write(`Prodara Compiler v${pkg.version}\n`);
-    process.stdout.write(`Node.js ${process.version}\n`);
-    process.stdout.write(`Workspace: ${root}\n`);
-    process.stdout.write(`Found ${files.length} .prd file(s)\n`);
+    process.stdout.write(box('Prodara Doctor', [
+      `Compiler  ${bold(`v${pkg.version}`)}`,
+      `Node.js   ${bold(process.version)}`,
+      `Workspace ${root}`,
+      `Found     ${bold(String(files.length))} .prd file(s)`,
+    ]) + '\n');
     for (const f of files) {
-      process.stdout.write(`  ${f}\n`);
+      process.stdout.write(`  ${dim(f)}\n`);
     }
     process.exitCode = 0;
   });
@@ -512,7 +552,7 @@ program
       const result = compile(root, { stopAfter: 'test' });
       outputDiagnostics(result.diagnostics, opts.format);
       if (!result.diagnostics.hasErrors) {
-        process.stdout.write('Build OK\n');
+        process.stdout.write(success('Build OK') + '\n');
       }
     };
 
@@ -563,12 +603,12 @@ program
 
     const explanation = explainNode(result.graph, nodeId);
     if (!explanation) {
-      process.stderr.write(`Node not found: ${nodeId}\n`);
+      process.stderr.write(uiError(`Node not found: ${nodeId}`) + '\n');
       const allIds = collectAllNodeIds(result.graph);
       if (allIds.size > 0) {
         const matches = [...allIds].filter(id => id.includes(/* v8 ignore next -- pop() on non-empty array */ nodeId.split('.').pop() ?? ''));
         if (matches.length > 0) {
-          process.stderr.write(`Did you mean: ${matches.slice(0, 5).join(', ')}?\n`);
+          process.stderr.write(uiInfo(`Did you mean: ${matches.slice(0, 5).join(', ')}?`) + '\n');
         }
       }
       process.exitCode = 1;
@@ -593,11 +633,11 @@ program
   .action((code: string) => {
     const info = getDiagnosticInfo(code);
     if (!info) {
-      process.stderr.write(`Unknown diagnostic code: ${code}\n`);
+      process.stderr.write(uiError(`Unknown diagnostic code: ${code}`) + '\n');
       process.exitCode = 1;
       return;
     }
-    process.stdout.write(`${code}: ${info.title}\n`);
+    process.stdout.write(`${bold(code)}: ${info.title}\n`);
     process.stdout.write(`  Phase: ${info.phase}\n`);
     process.stdout.write(`  Severity: ${info.severity}\n`);
     process.stdout.write(`  ${info.description}\n`);
@@ -616,14 +656,14 @@ program
     const root = resolve(path);
     try {
       const proposal = createProposal(description, root);
-      process.stdout.write(`Created change proposal: ${proposal.name}\n`);
-      process.stdout.write(`  Directory: ${relative(root, proposal.path)}/\n`);
+      process.stdout.write(success(`Created change proposal: ${proposal.name}`) + '\n');
+      process.stdout.write(`  Directory: ${dim(relative(root, proposal.path))}/\n`);
       process.stdout.write(`  delta.prd: Edit to define specification changes\n`);
       process.stdout.write(`  proposal.md: Document motivation and scope\n`);
       process.stdout.write(`  tasks.md: Track implementation tasks\n`);
       process.exitCode = 0;
     } catch (e) {
-      process.stderr.write(`${(e as Error).message}\n`);
+      process.stderr.write(uiError((e as Error).message) + '\n');
       process.exitCode = 1;
     }
   });
@@ -643,10 +683,10 @@ program
     if (opts.format === 'json') {
       process.stdout.write(JSON.stringify(proposals, null, 2) + '\n');
     } else if (proposals.length === 0) {
-      process.stdout.write('No active change proposals.\n');
-      process.stdout.write('Run `prodara propose "<description>"` to create one.\n');
+      process.stdout.write(uiInfo('No active change proposals.') + '\n');
+      process.stdout.write(dim('Run `prodara propose "<description>"` to create one.') + '\n');
     } else {
-      process.stdout.write(`Active change proposals (${proposals.length}):\n\n`);
+      process.stdout.write(bold(`Active change proposals (${proposals.length}):`) + '\n\n');
       for (const p of proposals) {
         /* v8 ignore next -- proposal status ternary */
         const icon = p.status === 'proposed' ? '○' : p.status === 'in-progress' ? '◐' : '●';
@@ -674,7 +714,7 @@ program
       const deltaPath = join(proposal.path, 'delta.prd');
 
       if (!existsSync(deltaPath)) {
-        process.stderr.write(`No delta.prd found in proposal: ${change}\n`);
+        process.stderr.write(uiError(`No delta.prd found in proposal: ${change}`) + '\n');
         process.exitCode = 1;
         return;
       }
@@ -689,8 +729,8 @@ program
         return;
       }
 
-      process.stdout.write(`Applied change proposal: ${proposal.name}\n`);
-      process.stdout.write(`  Status: ${proposal.status}\n`);
+      process.stdout.write(success(`Applied change proposal: ${proposal.name}`) + '\n');
+      process.stdout.write(`  Status: ${dim(proposal.status)}\n`);
 
       if (result.graph) {
         const prevGraph = readPreviousGraph(root);
@@ -705,7 +745,7 @@ program
       }
       process.exitCode = 0;
     } catch (e) {
-      process.stderr.write(`${(e as Error).message}\n`);
+      process.stderr.write(uiError((e as Error).message) + '\n');
       process.exitCode = 1;
     }
   });
@@ -722,11 +762,11 @@ program
     const root = resolve(path);
     try {
       const proposal = archiveProposal(change, root);
-      process.stdout.write(`Archived change proposal: ${proposal.name}\n`);
-      process.stdout.write(`  Moved to: ${relative(root, proposal.path)}/\n`);
+      process.stdout.write(success(`Archived change proposal: ${proposal.name}`) + '\n');
+      process.stdout.write(`  Moved to: ${dim(relative(root, proposal.path))}/\n`);
       process.exitCode = 0;
     } catch (e) {
-      process.stderr.write(`${(e as Error).message}\n`);
+      process.stderr.write(uiError((e as Error).message) + '\n');
       process.exitCode = 1;
     }
   });
@@ -763,7 +803,7 @@ program
       const resolved = autoResolveClarifications(clarifyResult.data.questions, config.phases.clarify.ambiguityThreshold, result.graph);
       questions = resolved.needsInput;
       if (opts.format !== 'json') {
-        process.stdout.write(`Auto-resolved ${resolved.autoResolved.length} question(s)\n\n`);
+        process.stdout.write(success(`Auto-resolved ${resolved.autoResolved.length} question(s)`) + '\n\n');
       }
     }
 
@@ -771,15 +811,15 @@ program
       const output = JSON.stringify({ questions, total: questions.length }, null, 2);
       if (opts.output) {
         writeFileSync(resolve(opts.output), output + '\n', 'utf-8');
-        process.stdout.write(`Questions written to ${opts.output}\n`);
+        process.stdout.write(success(`Questions written to ${opts.output}`) + '\n');
       } else {
         process.stdout.write(output + '\n');
       }
     } else {
       if (questions.length === 0) {
-        process.stdout.write('No ambiguities found in the specification.\n');
+        process.stdout.write(success('No ambiguities found in the specification.') + '\n');
       } else {
-        process.stdout.write(`Found ${questions.length} ambiguity question(s):\n\n`);
+        process.stdout.write(bold(`Found ${questions.length} ambiguity question(s):`) + '\n\n');
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i]!;
           process.stdout.write(`  ${i + 1}. [${q.category}] ${q.question}\n`);
@@ -790,7 +830,7 @@ program
       if (opts.output) {
         const output = questions.map((q, i) => `${i + 1}. [${q.category}] ${q.question}`).join('\n');
         writeFileSync(resolve(opts.output), output + '\n', 'utf-8');
-        process.stdout.write(`Questions written to ${opts.output}\n`);
+        process.stdout.write(success(`Questions written to ${opts.output}`) + '\n');
       }
     }
     process.exitCode = 0;
@@ -823,7 +863,7 @@ program
       const output = JSON.stringify(checklist, null, 2);
       if (opts.output) {
         writeFileSync(resolve(opts.output), output + '\n', 'utf-8');
-        process.stdout.write(`Checklist written to ${opts.output}\n`);
+        process.stdout.write(success(`Checklist written to ${opts.output}`) + '\n');
       } else {
         process.stdout.write(output + '\n');
       }
@@ -831,7 +871,7 @@ program
       const output = formatChecklistHuman(checklist);
       if (opts.output) {
         writeFileSync(resolve(opts.output), output + '\n', 'utf-8');
-        process.stdout.write(`Checklist written to ${opts.output}\n`);
+        process.stdout.write(success(`Checklist written to ${opts.output}`) + '\n');
       } else {
         process.stdout.write(output + '\n');
       }
@@ -912,7 +952,7 @@ program
       const output = JSON.stringify(data, null, 2);
       if (opts.output) {
         writeFileSync(resolve(opts.output), output + '\n', 'utf-8');
-        process.stdout.write(`Onboarding doc written to ${opts.output}\n`);
+        process.stdout.write(success(`Onboarding doc written to ${opts.output}`) + '\n');
       } else {
         process.stdout.write(output + '\n');
       }
@@ -951,7 +991,7 @@ program
       const output = lines.join('\n');
       if (opts.output) {
         writeFileSync(resolve(opts.output), output + '\n', 'utf-8');
-        process.stdout.write(`Onboarding doc written to ${opts.output}\n`);
+        process.stdout.write(success(`Onboarding doc written to ${opts.output}`) + '\n');
       } else {
         process.stdout.write(output + '\n');
       }
@@ -993,12 +1033,12 @@ program
     if (opts.format === 'json') {
       process.stdout.write(JSON.stringify(records, null, 2) + '\n');
     } else if (records.length === 0) {
-      process.stdout.write('No build history recorded.\n');
-      process.stdout.write('Run `prodara build` to create a build record.\n');
+      process.stdout.write(uiInfo('No build history recorded.') + '\n');
+      process.stdout.write(dim('Run `prodara build` to create a build record.') + '\n');
     } else {
-      process.stdout.write(`Build History (last ${records.length}):\n\n`);
+      process.stdout.write(bold(`Build History (last ${records.length}):`) + '\n\n');
       for (const r of records) {
-        const icon = r.outcome === 'success' ? '✓' : '✗';
+        const icon = r.outcome === 'success' ? phaseIcon('ok') : phaseIcon('error');
         const date = new Date(r.timestamp).toLocaleString();
         const phaseSummary = r.phases.map(p => `${p.name}:${p.status}`).join(' ');
         process.stdout.write(`  ${icon} ${date} — ${r.outcome}\n`);
@@ -1027,9 +1067,9 @@ ext
     const root = resolve(path);
     const extensions = listInstalledExtensions(root);
     if (extensions.length === 0) {
-      process.stdout.write('No extensions installed.\n');
+      process.stdout.write(uiInfo('No extensions installed.') + '\n');
     } else {
-      process.stdout.write(`Installed extensions (${extensions.length}):\n\n`);
+      process.stdout.write(bold(`Installed extensions (${extensions.length}):`) + '\n\n');
       for (const ext of extensions) {
         const caps = ext.manifest.capabilities.map(c => c.kind).join(', ');
         process.stdout.write(`  ${ext.manifest.name}@${ext.manifest.version} — ${ext.manifest.description}\n`);
@@ -1048,7 +1088,7 @@ ext
     const root = resolve(path);
     const manifest = JSON.parse(readFileSync(resolve(manifestPath), 'utf-8'));
     const installed = installExtension(root, manifest.name, manifest);
-    process.stdout.write(`Installed extension "${manifest.name}" at ${installed.path}\n`);
+    process.stdout.write(success(`Installed extension "${manifest.name}" at ${installed.path}`) + '\n');
     process.exitCode = 0;
   });
 
@@ -1060,7 +1100,7 @@ ext
   .action((name: string, path: string) => {
     const root = resolve(path);
     removeExtension(root, name);
-    process.stdout.write(`Removed extension "${name}".\n`);
+    process.stdout.write(success(`Removed extension "${name}".`) + '\n');
     process.exitCode = 0;
   });
 
@@ -1080,9 +1120,9 @@ pst
     const root = resolve(path);
     const presets = loadPresets(root);
     if (presets.length === 0) {
-      process.stdout.write('No presets installed.\n');
+      process.stdout.write(uiInfo('No presets installed.') + '\n');
     } else {
-      process.stdout.write(`Installed presets (${presets.length}):\n\n`);
+      process.stdout.write(bold(`Installed presets (${presets.length}):`) + '\n\n');
       for (const p of presets) {
         process.stdout.write(`  ${p.manifest.name}@${p.manifest.version} — ${p.manifest.description}\n`);
         process.stdout.write(`    Priority: ${p.priority}\n\n`);
@@ -1100,7 +1140,7 @@ pst
     const root = resolve(path);
     const manifest = JSON.parse(readFileSync(resolve(manifestPath), 'utf-8'));
     const installed = installPreset(root, manifest.name, manifest);
-    process.stdout.write(`Installed preset "${manifest.name}" at ${installed.path}\n`);
+    process.stdout.write(success(`Installed preset "${manifest.name}" at ${installed.path}`) + '\n');
     process.exitCode = 0;
   });
 
@@ -1112,7 +1152,7 @@ pst
   .action((name: string, path: string) => {
     const root = resolve(path);
     removePreset(root, name);
-    process.stdout.write(`Removed preset "${name}".\n`);
+    process.stdout.write(success(`Removed preset "${name}".`) + '\n');
     process.exitCode = 0;
   });
 
@@ -1143,7 +1183,7 @@ program
     const files = generateDocs(result.graph, docsConfig, root);
     writeDocs(files, docsConfig.outputDir, root);
 
-    process.stdout.write(`Generated ${files.length} doc file(s) in ${docsConfig.outputDir}/\n`);
+    process.stdout.write(success(`Generated ${files.length} doc file(s) in ${docsConfig.outputDir}/`) + '\n');
     process.exitCode = 0;
   });
 
