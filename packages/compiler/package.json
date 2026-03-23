@@ -1,6 +1,6 @@
 {
   "name": "@prodara/compiler",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "The Prodara compiler — transforms .prd specification files into a validated Product Graph",
   "author": "Prodara Contributors",
   "repository": {
