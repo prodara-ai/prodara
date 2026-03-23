@@ -205,6 +205,8 @@ When installed as a project dependency, provides a local `prodara` binary:
 ```bash
 npx prodara init                       # Scaffold project (auto-installs compiler)
 npx prodara init --skip-install        # Scaffold without npm setup
+npx prodara upgrade                    # Update existing project to latest version
+npx prodara upgrade --ai copilot       # Upgrade and regenerate slash commands
 npx prodara build                      # Full pipeline including AI implementation
 npx prodara build --headless           # Use API driver instead of prompt files
 npx prodara build --dry-run            # Preview implementation tasks without executing

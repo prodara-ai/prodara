@@ -100,6 +100,7 @@ const COMMAND_GROUPS: { group: string; commands: CommandDef[] }[] = [
     commands: [
       { name: 'build',     description: 'Full build pipeline: compile → workflow → review → verify' },
       { name: 'init',      description: 'Scaffold a new Prodara project' },
+      { name: 'upgrade',   description: 'Update a Prodara project to the latest version' },
       { name: 'validate',  description: 'Parse and validate .prd files without building' },
       { name: 'graph',     description: 'Compile .prd files and output the Product Graph' },
       { name: 'plan',      description: 'Compile and produce an incremental plan' },

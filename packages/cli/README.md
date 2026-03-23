@@ -22,6 +22,9 @@ This ensures you always run the compiler version pinned in your project's `packa
 # Create a new project — automatically installs @prodara/compiler
 prodara init my-project
 
+# Update an existing project to latest version
+prodara upgrade
+
 # In a project with @prodara/compiler installed locally
 prodara build
 prodara validate

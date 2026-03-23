@@ -343,6 +343,175 @@ module core {
   });
 
 // -----------------------------------------------------------------------
+// upgrade
+// -----------------------------------------------------------------------
+program
+  .command('upgrade')
+  .description('Update an existing Prodara project to the latest version')
+  .argument('[path]', 'Directory to upgrade', '.')
+  .option('--ai <agent>', 'Regenerate AI agent slash commands (e.g. copilot, claude, cursor)')
+  .option('--ai-commands-dir <dir>', 'Custom directory for slash commands (use with --ai generic)')
+  .option('--skip-install', 'Skip npm update of @prodara/compiler')
+  .option('--format <format>', 'Output format: human | json', 'human')
+  .action(async (path: string, opts: { ai?: string; aiCommandsDir?: string; skipInstall?: boolean; format: string }) => {
+    const root = resolve(path);
+    const prodaraDir = join(root, '.prodara');
+    const configFile = join(root, CONFIG_FILENAME);
+
+    if (!existsSync(prodaraDir)) {
+      process.stderr.write(uiError('Not a Prodara project — .prodara/ not found. Run `prodara init` first.') + '\n');
+      process.exitCode = 1;
+      return;
+    }
+
+    const changes: string[] = [];
+
+    if (opts.format !== 'json') {
+      process.stdout.write(banner('Prodara Upgrade') + '\n\n');
+    }
+
+    // Ensure directories
+    for (const sub of ['runs', 'reviewers']) {
+      const dir = join(prodaraDir, sub);
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true });
+        changes.push(`Created .prodara/${sub}/`);
+      }
+    }
+
+    // Scaffold sample reviewer if missing
+    const sampleReviewer = join(prodaraDir, 'reviewers', 'performance.md');
+    if (!existsSync(sampleReviewer)) {
+      writeFileSync(sampleReviewer, `# Performance Reviewer\n\nReview the specification and implementation for performance concerns.\n\n## Focus Areas\n- Identify N+1 query patterns in workflows that iterate over collections\n- Check that large collections define pagination (limit/offset or cursor)\n- Flag missing caching strategies for frequently-read entities\n- Ensure bulk operations exist where repeated single-item writes appear\n- Verify that async workflows are used for long-running operations\n`, 'utf-8');
+      changes.push('Created .prodara/reviewers/performance.md');
+    }
+
+    // Merge config additively — only add new keys, never overwrite user values
+    if (existsSync(configFile)) {
+      try {
+        const raw = JSON.parse(readFileSync(configFile, 'utf-8')) as Record<string, unknown>;
+        const latest: Record<string, unknown> = {
+          phases: {},
+          reviewFix: { maxIterations: 3 },
+          reviewers: {
+            architecture: { enabled: true },
+            security: { enabled: true },
+            codeQuality: { enabled: true },
+            testQuality: { enabled: true },
+            uxQuality: { enabled: true },
+            adversarial: { enabled: false },
+            edgeCase: { enabled: false },
+            performance: { enabled: true, promptPath: '.prodara/reviewers/performance.md' },
+          },
+          validation: { lint: null, typecheck: null, test: null, build: null },
+          audit: { enabled: true, path: '.prodara/runs/' },
+        };
+        let updated = false;
+        for (const [key, value] of Object.entries(latest)) {
+          if (!(key in raw)) {
+            raw[key] = value;
+            updated = true;
+            changes.push(`Added config key: ${key}`);
+          } else if (typeof value === 'object' && value !== null && !Array.isArray(value)
+                  && typeof raw[key] === 'object' && raw[key] !== null && !Array.isArray(raw[key])) {
+            const existing = raw[key] as Record<string, unknown>;
+            const template = value as Record<string, unknown>;
+            for (const [subKey, subVal] of Object.entries(template)) {
+              if (!(subKey in existing)) {
+                existing[subKey] = subVal;
+                updated = true;
+                changes.push(`Added config key: ${key}.${subKey}`);
+              }
+            }
+          }
+        }
+        if (updated) {
+          writeFileSync(configFile, JSON.stringify(raw, null, 2) + '\n', 'utf-8');
+        }
+      } catch {
+        changes.push('Could not parse prodara.config.json — skipped config merge');
+      }
+    } else {
+      writeFileSync(configFile, JSON.stringify({
+        phases: {},
+        reviewFix: { maxIterations: 3 },
+        reviewers: {
+          architecture: { enabled: true },
+          security: { enabled: true },
+          codeQuality: { enabled: true },
+          testQuality: { enabled: true },
+          uxQuality: { enabled: true },
+          adversarial: { enabled: false },
+          edgeCase: { enabled: false },
+          performance: { enabled: true, promptPath: '.prodara/reviewers/performance.md' },
+        },
+        validation: { lint: null, typecheck: null, test: null, build: null },
+        audit: { enabled: true, path: '.prodara/runs/' },
+      }, null, 2) + '\n', 'utf-8');
+      changes.push('Created prodara.config.json');
+    }
+
+    // Update compiler
+    if (!opts.skipInstall) {
+      const spinner = opts.format !== 'json' ? createSpinner('Updating @prodara/compiler...').start() : null;
+      try {
+        execSync('npm install --save-dev @prodara/compiler@latest', { cwd: root, stdio: 'pipe' });
+        spinner?.succeed('Updated @prodara/compiler');
+        changes.push('Updated @prodara/compiler to latest');
+      } catch {
+        spinner?.fail('Failed to update @prodara/compiler');
+        process.stderr.write(uiError('Failed to update @prodara/compiler. Run manually: npm install --save-dev @prodara/compiler@latest') + '\n');
+        process.exitCode = 1;
+        return;
+      }
+    }
+
+    // Regenerate slash commands
+    if (opts.ai) {
+      if (!isValidAgentId(opts.ai)) {
+        const supported = listSupportedAgents().join(', ');
+        process.stderr.write(uiError(`Unknown AI agent: ${opts.ai}`) + '\n');
+        process.stderr.write(uiInfo(`Supported agents: ${supported}`) + '\n');
+        process.exitCode = 1;
+        return;
+      }
+      const agentId = opts.ai as AgentId;
+      if (agentId === 'generic' && !opts.aiCommandsDir) {
+        process.stderr.write(uiError('--ai generic requires --ai-commands-dir <dir>') + '\n');
+        process.exitCode = 1;
+        return;
+      }
+
+      const appPrd = join(root, 'app.prd');
+      let name = 'my_app';
+      /* v8 ignore next 5 -- name extraction from existing .prd */
+      if (existsSync(appPrd)) {
+        const content = readFileSync(appPrd, 'utf-8');
+        const match = content.match(/^product\s+(\w+)/);
+        if (match && match[1]) name = match[1];
+      }
+
+      const commands = generateSlashCommands(agentId, root, name, opts.aiCommandsDir);
+      writeSlashCommands(commands);
+      changes.push(`Regenerated slash commands for ${agentId}`);
+    }
+
+    // Output
+    if (opts.format === 'json') {
+      process.stdout.write(JSON.stringify({ status: 'upgraded', changes }, null, 2) + '\n');
+    } else {
+      if (changes.length === 0) {
+        process.stdout.write(success('Already up to date — no changes needed') + '\n');
+      } else {
+        for (const change of changes) {
+          process.stdout.write(success(change) + '\n');
+        }
+      }
+    }
+    process.exitCode = 0;
+  });
+
+// -----------------------------------------------------------------------
 // validate
 // -----------------------------------------------------------------------
 program

@@ -91,6 +91,29 @@ If the directory already exists and contains an `app.prd`, the command exits wit
 
 ---
 
+### `prodara upgrade [path]`
+
+Update an existing Prodara project to the latest version. Ensures all required directories and config keys exist, updates the compiler, and optionally regenerates slash commands.
+
+```bash
+prodara upgrade
+prodara upgrade ./my-project --ai copilot
+prodara upgrade --skip-install --format json
+```
+
+**Options:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--ai <agent>` | Regenerate AI agent slash commands | — |
+| `--ai-commands-dir <dir>` | Custom slash-command directory (with `--ai generic`) | — |
+| `--skip-install` | Skip npm update of `@prodara/compiler` | `false` |
+| `--format <format>` | `human` or `json` | `human` |
+
+The command exits with an error if the directory is not a Prodara project (`.prodara/` not found).
+
+---
+
 ### `prodara validate [path]`
 
 Parse and validate `.prd` files. Reports syntax errors, resolution errors, type errors, and semantic errors without building a graph.

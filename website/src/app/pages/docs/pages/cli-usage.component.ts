@@ -88,6 +88,11 @@ export class CliUsageComponent {
       example: 'prodara init my-project --template saas',
     },
     {
+      name: 'upgrade',
+      desc: 'Update an existing Prodara project to the latest version. Adds missing config keys, creates new directories, updates the compiler, and regenerates slash commands.',
+      example: 'prodara upgrade --ai copilot',
+    },
+    {
       name: 'validate',
       desc: 'Parse and type-check .prd files without producing a Product Graph. Useful for quick error checking during development.',
       example: 'prodara validate --format json ./project',

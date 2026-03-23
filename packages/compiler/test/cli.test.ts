@@ -714,6 +714,291 @@ describe('init command', () => {
 });
 
 // ---------------------------------------------------------------------------
+// upgrade command
+// ---------------------------------------------------------------------------
+
+describe('upgrade command', () => {
+  it('exits 1 when .prodara/ does not exist', async () => {
+    const { mkdtempSync, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir]);
+      expect(stderrOutput).toContain('.prodara/ not found');
+      expect(process.exitCode).toBe(1);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('creates missing directories', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, rmSync, existsSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir, '--skip-install']);
+      expect(existsSync(join(tmpDir, '.prodara', 'runs'))).toBe(true);
+      expect(existsSync(join(tmpDir, '.prodara', 'reviewers'))).toBe(true);
+      expect(process.exitCode).toBe(0);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('creates performance.md reviewer when missing', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, rmSync, existsSync, readFileSync: fsRead } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir, '--skip-install']);
+      const reviewerFile = join(tmpDir, '.prodara', 'reviewers', 'performance.md');
+      expect(existsSync(reviewerFile)).toBe(true);
+      expect(fsRead(reviewerFile, 'utf-8')).toContain('Performance Reviewer');
+      expect(stdoutOutput).toContain('performance.md');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('preserves existing config values and adds missing keys', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, writeFileSync: fsWrite, rmSync, readFileSync: fsRead } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      // Write a partial config — missing reviewers.performance, missing audit
+      fsWrite(join(tmpDir, 'prodara.config.json'), JSON.stringify({
+        phases: { specify: { agent: 'custom' } },
+        reviewers: { architecture: { enabled: false } },
+      }, null, 2) + '\n', 'utf-8');
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir, '--skip-install']);
+      const config = JSON.parse(fsRead(join(tmpDir, 'prodara.config.json'), 'utf-8'));
+      // Existing values preserved
+      expect(config.phases).toEqual({ specify: { agent: 'custom' } });
+      expect(config.reviewers.architecture).toEqual({ enabled: false });
+      // New keys added
+      expect(config.reviewers.performance).toEqual({ enabled: true, promptPath: '.prodara/reviewers/performance.md' });
+      expect(config.audit).toEqual({ enabled: true, path: '.prodara/runs/' });
+      expect(stdoutOutput).toContain('Added config key');
+      expect(process.exitCode).toBe(0);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('creates config when prodara.config.json is missing', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, rmSync, existsSync, readFileSync: fsRead } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir, '--skip-install']);
+      expect(existsSync(join(tmpDir, 'prodara.config.json'))).toBe(true);
+      const config = JSON.parse(fsRead(join(tmpDir, 'prodara.config.json'), 'utf-8'));
+      expect(config.reviewers.architecture).toEqual({ enabled: true });
+      expect(stdoutOutput).toContain('Created prodara.config.json');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('updates @prodara/compiler via npm', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir]);
+      expect(mockExecSync).toHaveBeenCalledWith(
+        'npm install --save-dev @prodara/compiler@latest',
+        expect.objectContaining({ cwd: expect.stringContaining(tmpDir) }),
+      );
+      expect(stdoutOutput).toContain('Updated @prodara/compiler');
+      expect(process.exitCode).toBe(0);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('updates compiler with json format (no spinner)', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir, '--format', 'json']);
+      expect(mockExecSync).toHaveBeenCalledWith(
+        'npm install --save-dev @prodara/compiler@latest',
+        expect.objectContaining({ cwd: expect.stringContaining(tmpDir) }),
+      );
+      const output = JSON.parse(stdoutOutput);
+      expect(output.status).toBe('upgraded');
+      expect(process.exitCode).toBe(0);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('skips npm update with --skip-install', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir, '--skip-install']);
+      expect(mockExecSync).not.toHaveBeenCalled();
+      expect(process.exitCode).toBe(0);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('exits 1 when npm update fails', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      mockExecSync.mockImplementationOnce(() => { throw new Error('npm failed'); });
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir]);
+      expect(stderrOutput).toContain('Failed to update');
+      expect(process.exitCode).toBe(1);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('regenerates slash commands with --ai', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      mockIsValidAgentId.mockReturnValue(true);
+      mockGenerateSlashCommands.mockReturnValue([]);
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir, '--skip-install', '--ai', 'copilot']);
+      expect(mockGenerateSlashCommands).toHaveBeenCalledWith('copilot', expect.any(String), 'my_app', undefined);
+      expect(mockWriteSlashCommands).toHaveBeenCalled();
+      expect(stdoutOutput).toContain('Regenerated slash commands');
+      expect(process.exitCode).toBe(0);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('exits 1 for invalid --ai agent', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      mockIsValidAgentId.mockReturnValue(false);
+      mockListSupportedAgents.mockReturnValue(['copilot', 'claude']);
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir, '--skip-install', '--ai', 'invalid']);
+      expect(stderrOutput).toContain('Unknown AI agent');
+      expect(process.exitCode).toBe(1);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('exits 1 when --ai generic without --ai-commands-dir', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      mockIsValidAgentId.mockReturnValue(true);
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir, '--skip-install', '--ai', 'generic']);
+      expect(stderrOutput).toContain('--ai-commands-dir');
+      expect(process.exitCode).toBe(1);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('outputs JSON format', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir, '--skip-install', '--format', 'json']);
+      const output = JSON.parse(stdoutOutput);
+      expect(output.status).toBe('upgraded');
+      expect(Array.isArray(output.changes)).toBe(true);
+      expect(process.exitCode).toBe(0);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('reports already up to date when no changes needed', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, writeFileSync: fsWrite, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara', 'runs'), { recursive: true });
+      fsMkdir(join(tmpDir, '.prodara', 'reviewers'), { recursive: true });
+      fsWrite(join(tmpDir, '.prodara', 'reviewers', 'performance.md'), '# Performance Reviewer\n', 'utf-8');
+      fsWrite(join(tmpDir, 'prodara.config.json'), JSON.stringify({
+        phases: {},
+        reviewFix: { maxIterations: 3 },
+        reviewers: {
+          architecture: { enabled: true },
+          security: { enabled: true },
+          codeQuality: { enabled: true },
+          testQuality: { enabled: true },
+          uxQuality: { enabled: true },
+          adversarial: { enabled: false },
+          edgeCase: { enabled: false },
+          performance: { enabled: true, promptPath: '.prodara/reviewers/performance.md' },
+        },
+        validation: { lint: null, typecheck: null, test: null, build: null },
+        audit: { enabled: true, path: '.prodara/runs/' },
+      }, null, 2) + '\n', 'utf-8');
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir, '--skip-install']);
+      expect(stdoutOutput).toContain('Already up to date');
+      expect(process.exitCode).toBe(0);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('handles malformed config gracefully', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, writeFileSync: fsWrite, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      fsWrite(join(tmpDir, 'prodara.config.json'), 'not valid json{{{', 'utf-8');
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir, '--skip-install']);
+      expect(stdoutOutput).toContain('Could not parse');
+      expect(process.exitCode).toBe(0);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // validate command
 // ---------------------------------------------------------------------------
 

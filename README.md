@@ -235,6 +235,8 @@ prodara init [name]                # Scaffold project (auto-installs compiler)
 prodara init --template saas       # Use a starter template
 prodara init --skip-install        # Skip npm init and compiler installation
 prodara init --ai copilot          # Generate slash commands for an AI agent
+prodara upgrade                    # Update project to latest version
+prodara upgrade --ai copilot       # Upgrade and regenerate slash commands
 prodara propose "Add payments"     # Create change proposal
 prodara changes                    # List active proposals
 prodara apply <proposal>           # Apply proposal after validation
