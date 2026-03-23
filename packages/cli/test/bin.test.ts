@@ -48,21 +48,30 @@ vi.mock('node:module', () => ({
 // ---------------------------------------------------------------------------
 
 let stderrOutput: string;
+let stdoutOutput: string;
 let originalStderrWrite: typeof process.stderr.write;
+let originalStdoutWrite: typeof process.stdout.write;
 let originalArgv: string[];
 let originalExitCode: number | undefined;
 
-function captureStderr(): void {
+function captureOutput(): void {
   stderrOutput = '';
+  stdoutOutput = '';
   originalStderrWrite = process.stderr.write;
+  originalStdoutWrite = process.stdout.write;
   process.stderr.write = ((chunk: string) => {
     stderrOutput += chunk;
     return true;
   }) as typeof process.stderr.write;
+  process.stdout.write = ((chunk: string) => {
+    stdoutOutput += chunk;
+    return true;
+  }) as typeof process.stdout.write;
 }
 
-function restoreStderr(): void {
+function restoreOutput(): void {
   process.stderr.write = originalStderrWrite;
+  process.stdout.write = originalStdoutWrite;
 }
 
 // ---------------------------------------------------------------------------
@@ -70,13 +79,15 @@ function restoreStderr(): void {
 // ---------------------------------------------------------------------------
 
 let main: () => void;
+let printHelp: (version: string) => void;
+let printVersion: (wrapperVersion: string, localVersion: string | null) => void;
 
 beforeEach(async () => {
   vi.resetAllMocks();
   originalArgv = process.argv;
   originalExitCode = process.exitCode;
   process.exitCode = undefined;
-  captureStderr();
+  captureOutput();
 
   // Default: resolveLocal returns null (no local compiler)
   mockResolveLocal.mockReturnValue(null);
@@ -90,10 +101,12 @@ beforeEach(async () => {
 
   const mod = await import('../src/bin.js');
   main = mod.main;
+  printHelp = mod.printHelp;
+  printVersion = mod.printVersion;
 });
 
 afterEach(() => {
-  restoreStderr();
+  restoreOutput();
   process.argv = originalArgv;
   process.exitCode = originalExitCode;
 });
@@ -304,5 +317,132 @@ describe('bin', () => {
     mockResolveLocal.mockReturnValue(null);
     main();
     expect(stderrOutput).toContain('v0.0.0');
+  });
+
+  // -----------------------------------------------------------------------
+  // help command
+  // -----------------------------------------------------------------------
+
+  it('shows help for "help" argument', () => {
+    process.argv = ['node', 'prodara', 'help'];
+    main();
+    expect(stdoutOutput).toContain('Prodara CLI');
+    expect(stdoutOutput).toContain('Usage:');
+    expect(stdoutOutput).toContain('build');
+    expect(stdoutOutput).toContain('init');
+    expect(stdoutOutput).toContain('validate');
+    expect(stdoutOutput).toContain('Core');
+    expect(stdoutOutput).toContain('Analysis');
+    expect(stdoutOutput).toContain('Global Options');
+    expect(process.exitCode).toBe(0);
+    expect(mockExecFileSync).not.toHaveBeenCalled();
+  });
+
+  it('shows help for "--help" flag', () => {
+    process.argv = ['node', 'prodara', '--help'];
+    main();
+    expect(stdoutOutput).toContain('Prodara CLI');
+    expect(stdoutOutput).toContain('Usage:');
+    expect(process.exitCode).toBe(0);
+  });
+
+  it('shows help for "-h" flag', () => {
+    process.argv = ['node', 'prodara', '-h'];
+    main();
+    expect(stdoutOutput).toContain('Prodara CLI');
+    expect(process.exitCode).toBe(0);
+  });
+
+  it('help includes all command groups', () => {
+    process.argv = ['node', 'prodara', 'help'];
+    main();
+    expect(stdoutOutput).toContain('Core');
+    expect(stdoutOutput).toContain('Analysis');
+    expect(stdoutOutput).toContain('Exploration');
+    expect(stdoutOutput).toContain('Change Management');
+    expect(stdoutOutput).toContain('Utilities');
+  });
+
+  it('help does not delegate to local compiler', () => {
+    process.argv = ['node', 'prodara', 'help'];
+    mockResolveLocal.mockReturnValue({
+      packageDir: '/fake',
+      version: '0.1.0',
+      cliEntry: '/fake/dist/cli/main.js',
+    });
+    main();
+    expect(mockExecFileSync).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(0);
+  });
+
+  // -----------------------------------------------------------------------
+  // version command
+  // -----------------------------------------------------------------------
+
+  it('shows version with local compiler installed', () => {
+    process.argv = ['node', 'prodara', 'version'];
+    mockResolveLocal.mockReturnValue({
+      packageDir: '/fake',
+      version: '0.1.0',
+      cliEntry: '/fake/dist/cli/main.js',
+    });
+    main();
+    expect(stdoutOutput).toContain('@prodara/cli');
+    expect(stdoutOutput).toContain('@prodara/compiler');
+    expect(stdoutOutput).toContain('v0.1.0');
+    expect(process.exitCode).toBe(0);
+    expect(mockExecFileSync).not.toHaveBeenCalled();
+  });
+
+  it('shows version without local compiler', () => {
+    process.argv = ['node', 'prodara', 'version'];
+    mockResolveLocal.mockReturnValue(null);
+    main();
+    expect(stdoutOutput).toContain('@prodara/cli');
+    expect(stdoutOutput).toContain('not installed');
+    expect(process.exitCode).toBe(0);
+  });
+
+  it('shows version for "--version" flag', () => {
+    process.argv = ['node', 'prodara', '--version'];
+    mockResolveLocal.mockReturnValue(null);
+    main();
+    expect(stdoutOutput).toContain('@prodara/cli');
+    expect(process.exitCode).toBe(0);
+  });
+
+  it('shows version for "-V" flag', () => {
+    process.argv = ['node', 'prodara', '-V'];
+    mockResolveLocal.mockReturnValue(null);
+    main();
+    expect(stdoutOutput).toContain('@prodara/cli');
+    expect(process.exitCode).toBe(0);
+  });
+
+  // -----------------------------------------------------------------------
+  // printHelp / printVersion direct tests
+  // -----------------------------------------------------------------------
+
+  it('printHelp outputs formatted help with given version', () => {
+    printHelp('1.2.3');
+    expect(stdoutOutput).toContain('Prodara CLI');
+    expect(stdoutOutput).toContain('v1.2.3');
+    expect(stdoutOutput).toContain('prodara');
+    expect(stdoutOutput).toContain('<command>');
+  });
+
+  it('printVersion shows both versions when local is present', () => {
+    printVersion('1.0.0', '1.0.1');
+    expect(stdoutOutput).toContain('@prodara/cli');
+    expect(stdoutOutput).toContain('v1.0.0');
+    expect(stdoutOutput).toContain('@prodara/compiler');
+    expect(stdoutOutput).toContain('v1.0.1');
+  });
+
+  it('printVersion shows not installed when local is null', () => {
+    printVersion('1.0.0', null);
+    expect(stdoutOutput).toContain('@prodara/cli');
+    expect(stdoutOutput).toContain('v1.0.0');
+    expect(stdoutOutput).toContain('not installed');
   });
 });

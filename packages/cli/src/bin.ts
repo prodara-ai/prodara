@@ -16,6 +16,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import pc from 'picocolors';
 import { resolveLocal, checkVersionCompatibility } from './resolve.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -52,12 +53,140 @@ function resolveBundledCompiler(): string | null {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Command definitions for help output
+// ---------------------------------------------------------------------------
+
+interface CommandDef {
+  readonly name: string;
+  readonly description: string;
+}
+
+const COMMAND_GROUPS: { group: string; commands: CommandDef[] }[] = [
+  {
+    group: 'Core',
+    commands: [
+      { name: 'build',     description: 'Full build pipeline: compile → workflow → review → verify' },
+      { name: 'init',      description: 'Scaffold a new Prodara project' },
+      { name: 'validate',  description: 'Parse and validate .prd files without building' },
+      { name: 'graph',     description: 'Compile .prd files and output the Product Graph' },
+      { name: 'plan',      description: 'Compile and produce an incremental plan' },
+      { name: 'test',      description: 'Run spec tests defined in .prd files' },
+    ],
+  },
+  {
+    group: 'Analysis',
+    commands: [
+      { name: 'diff',      description: 'Show incremental diff between current and previous graph' },
+      { name: 'drift',     description: 'Detect if specs have drifted from last build' },
+      { name: 'analyze',   description: 'Run cross-spec consistency and coverage analysis' },
+      { name: 'doctor',    description: 'Check compiler installation and workspace health' },
+      { name: 'dashboard', description: 'Show project overview dashboard' },
+    ],
+  },
+  {
+    group: 'Exploration',
+    commands: [
+      { name: 'explain',   description: 'Explain a node in the product graph by ID' },
+      { name: 'why',       description: 'Explain why a diagnostic code was reported' },
+      { name: 'onboard',   description: 'Generate a guided walkthrough for new team members' },
+      { name: 'checklist', description: 'Generate a quality validation checklist' },
+    ],
+  },
+  {
+    group: 'Change Management',
+    commands: [
+      { name: 'propose',   description: 'Create a new change proposal' },
+      { name: 'changes',   description: 'List active change proposals' },
+      { name: 'apply',     description: 'Apply a change proposal' },
+      { name: 'archive',   description: 'Archive a completed change proposal' },
+    ],
+  },
+  {
+    group: 'Utilities',
+    commands: [
+      { name: 'watch',     description: 'Watch .prd files and re-compile on changes' },
+      { name: 'clarify',   description: 'Identify specification ambiguities' },
+      { name: 'docs',      description: 'Generate markdown docs from .prd specifications' },
+      { name: 'history',   description: 'Browse past build runs' },
+      { name: 'extension', description: 'Manage Prodara extensions (list, add, remove)' },
+      { name: 'preset',    description: 'Manage Prodara presets (list, add, remove)' },
+    ],
+  },
+];
+
+// ---------------------------------------------------------------------------
+// help / version output
+// ---------------------------------------------------------------------------
+
+export function printHelp(version: string): void {
+  const border = pc.dim('─'.repeat(60));
+  const lines: string[] = [];
+
+  lines.push('');
+  lines.push(pc.bold('  Prodara CLI') + pc.dim(` v${version}`));
+  lines.push(pc.dim('  The spec-driven compiler for product engineering'));
+  lines.push('');
+  lines.push(border);
+  lines.push('');
+  lines.push(pc.bold('  Usage: ') + 'prodara ' + pc.cyan('<command>') + ' [options]');
+  lines.push('');
+
+  // Compute column width for alignment
+  const maxName = Math.max(...COMMAND_GROUPS.flatMap(g => g.commands.map(c => c.name.length)));
+
+  for (const { group, commands } of COMMAND_GROUPS) {
+    lines.push(pc.bold(`  ${group}`));
+    for (const cmd of commands) {
+      const padded = cmd.name.padEnd(maxName + 2);
+      lines.push(`    ${pc.green(padded)}${pc.dim(cmd.description)}`);
+    }
+    lines.push('');
+  }
+
+  lines.push(pc.bold('  Global Options'));
+  lines.push(`    ${pc.green('help'.padEnd(maxName + 2))}${pc.dim('Show this help message')}`);
+  lines.push(`    ${pc.green('version'.padEnd(maxName + 2))}${pc.dim('Show CLI and compiler versions')}`);
+  lines.push('');
+  lines.push(border);
+  lines.push('');
+  lines.push(pc.dim('  Run ') + pc.cyan('prodara <command> --help') + pc.dim(' for command-specific usage.'));
+  lines.push('');
+
+  process.stdout.write(lines.join('\n'));
+}
+
+export function printVersion(wrapperVersion: string, localVersion: string | null): void {
+  const lines: string[] = [];
+  lines.push(`${pc.bold('@prodara/cli')}      ${pc.green(`v${wrapperVersion}`)}`);
+  if (localVersion) {
+    lines.push(`${pc.bold('@prodara/compiler')} ${pc.green(`v${localVersion}`)}`);
+  } else {
+    lines.push(`${pc.bold('@prodara/compiler')} ${pc.dim('not installed')}`);
+  }
+  process.stdout.write(lines.join('\n') + '\n');
+}
+
 export function main(): void {
   const cwd = process.cwd();
   const local = resolveLocal(cwd);
   const wrapperVersion = getWrapperVersion();
 
   const args = process.argv.slice(2);
+
+  // Intercept help and version before delegation
+  const firstArg = args[0];
+  if (firstArg === 'help' || firstArg === '--help' || firstArg === '-h') {
+    printHelp(wrapperVersion);
+    process.exitCode = 0;
+    return;
+  }
+
+  if (firstArg === 'version' || firstArg === '--version' || firstArg === '-V') {
+    printVersion(wrapperVersion, local?.version ?? null);
+    process.exitCode = 0;
+    return;
+  }
 
   if (!local) {
     // Special-case: `prodara init` bootstraps a project even without a local
