@@ -563,14 +563,27 @@ describe('build command', () => {
 
 describe('init command', () => {
   it('scaffolds project when app.prd does not exist', async () => {
-    const { mkdtempSync, rmSync } = await import('node:fs');
+    const { mkdtempSync, rmSync, existsSync, readFileSync } = await import('node:fs');
     const { join } = await import('node:path');
     const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
     try {
       const program = createProgram();
       await runCommand(program, ['init', tmpDir, '--name', 'test_app']);
       expect(stdoutOutput).toContain('Created app.prd');
+      expect(stdoutOutput).toContain('Created .prodara/reviewers/');
       expect(process.exitCode).toBe(0);
+
+      // Verify reviewer file was scaffolded
+      const reviewerFile = join(tmpDir, '.prodara', 'reviewers', 'performance.md');
+      expect(existsSync(reviewerFile)).toBe(true);
+      expect(readFileSync(reviewerFile, 'utf-8')).toContain('Performance Reviewer');
+
+      // Verify config includes reviewer entries
+      const config = JSON.parse(readFileSync(join(tmpDir, 'prodara.config.json'), 'utf-8'));
+      expect(config.reviewers.architecture).toEqual({ enabled: true });
+      expect(config.reviewers.security).toEqual({ enabled: true });
+      expect(config.reviewers.performance).toEqual({ enabled: true, promptPath: '.prodara/reviewers/performance.md' });
+      expect(config.reviewers.adversarial).toEqual({ enabled: false });
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }

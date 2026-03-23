@@ -213,6 +213,20 @@ program
     mkdirSync(join(prodaraDir, 'runs'), { recursive: true });
     mkdirSync(join(prodaraDir, 'reviewers'), { recursive: true });
 
+    // Scaffold sample custom reviewer
+    const sampleReviewer = join(prodaraDir, 'reviewers', 'performance.md');
+    writeFileSync(sampleReviewer, `# Performance Reviewer
+
+Review the specification and implementation for performance concerns.
+
+## Focus Areas
+- Identify N+1 query patterns in workflows that iterate over collections
+- Check that large collections define pagination (limit/offset or cursor)
+- Flag missing caching strategies for frequently-read entities
+- Ensure bulk operations exist where repeated single-item writes appear
+- Verify that async workflows are used for long-running operations
+`, 'utf-8');
+
     if (opts.template) {
       const tmpl = getStarterTemplate(opts.template, opts.name);
       if (!tmpl) {
@@ -254,13 +268,22 @@ module core {
     writeFileSync(configFile, JSON.stringify({
       phases: {},
       reviewFix: { maxIterations: 3 },
-      reviewers: {},
+      reviewers: {
+        architecture: { enabled: true },
+        security: { enabled: true },
+        codeQuality: { enabled: true },
+        testQuality: { enabled: true },
+        uxQuality: { enabled: true },
+        adversarial: { enabled: false },
+        edgeCase: { enabled: false },
+        performance: { enabled: true, promptPath: '.prodara/reviewers/performance.md' },
+      },
       validation: { lint: null, typecheck: null, test: null, build: null },
       audit: { enabled: true, path: '.prodara/runs/' },
     }, null, 2) + '\n', 'utf-8');
 
     process.stdout.write(success(`Created ${CONFIG_FILENAME}`) + '\n');
-    process.stdout.write(success('Created .prodara/') + '\n');
+    process.stdout.write(success('Created .prodara/reviewers/') + '\n');
 
     // Slash command generation — interactive prompt if --ai not provided
     let agentId: AgentId | null = null;
