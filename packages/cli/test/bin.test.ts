@@ -9,11 +9,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // ---------------------------------------------------------------------------
 
 const mockExecFileSync = vi.fn();
+const mockExecSync = vi.fn();
 const mockResolveLocal = vi.fn();
 const mockCheckVersionCompatibility = vi.fn();
 
 vi.mock('node:child_process', () => ({
   execFileSync: (...args: unknown[]) => mockExecFileSync(...args),
+  execSync: (...args: unknown[]) => mockExecSync(...args),
 }));
 
 vi.mock('../src/resolve.js', () => ({
@@ -32,16 +34,9 @@ vi.mock('node:fs', async () => {
     ...orig,
     existsSync: (...args: unknown[]) => mockExistsSync(args[0] as string),
     readFileSync: (...args: unknown[]) => mockReadFileSync(args[0] as string, args[1] as string),
+    realpathSync: orig.realpathSync,
   };
 });
-
-// Mock createRequire for resolveBundledCompiler
-const mockRequireResolve = vi.fn();
-vi.mock('node:module', () => ({
-  createRequire: () => ({
-    resolve: (...args: unknown[]) => mockRequireResolve(...args),
-  }),
-}));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -81,6 +76,7 @@ function restoreOutput(): void {
 let main: () => void;
 let printHelp: (version: string) => void;
 let printVersion: (wrapperVersion: string, localVersion: string | null) => void;
+let bootstrapInit: (cwd: string, wrapperVersion: string) => boolean;
 
 beforeEach(async () => {
   vi.resetAllMocks();
@@ -94,8 +90,6 @@ beforeEach(async () => {
   // Default: existsSync and readFileSync delegate to real implementations
   mockExistsSync.mockImplementation((p: string) => realFs.existsSync(p));
   mockReadFileSync.mockImplementation((p: string, enc?: string) => realFs.readFileSync(p, enc as BufferEncoding));
-  // Default: require.resolve throws (no bundled compiler)
-  mockRequireResolve.mockImplementation(() => { throw new Error('not found'); });
   // Default: version compat ok
   mockCheckVersionCompatibility.mockReturnValue({ compatible: true, message: '' });
 
@@ -103,6 +97,7 @@ beforeEach(async () => {
   main = mod.main;
   printHelp = mod.printHelp;
   printVersion = mod.printVersion;
+  bootstrapInit = mod.bootstrapInit;
 });
 
 afterEach(() => {
@@ -213,46 +208,87 @@ describe('bin', () => {
   // init bootstrap (no local compiler)
   // -----------------------------------------------------------------------
 
-  it('delegates init to bundled compiler when no local install', () => {
+  it('bootstraps init: creates package.json, installs compiler, delegates', () => {
     process.argv = ['node', 'prodara', 'init', '.'];
-    mockResolveLocal.mockReturnValue(null);
-    mockRequireResolve.mockReturnValue('/cli/node_modules/@prodara/compiler/package.json');
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.1.0',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    // First call: no local. After bootstrap installs compiler, second call returns local.
+    mockResolveLocal.mockReturnValueOnce(null).mockReturnValueOnce(fakeLocal).mockReturnValue(fakeLocal);
+    // Simulate no package.json in cwd
+    const cwd = process.cwd();
     mockExistsSync.mockImplementation((p: string) => {
-      if (p.includes('dist/cli/main.js')) return true;
+      if (p === cwd + '/package.json' || p === cwd + '\\package.json') return false;
+      if (p.endsWith('dist/cli/main.js')) return true;
       return realFs.existsSync(p);
     });
     main();
+    // npm init should have been called
+    expect(mockExecSync).toHaveBeenCalledWith('npm init -y', expect.objectContaining({ cwd: expect.any(String) }));
+    // npm install should have been called
+    expect(mockExecSync).toHaveBeenCalledWith('npm install --save-dev @prodara/compiler', expect.objectContaining({ cwd: expect.any(String) }));
+    // Should delegate to local compiler with --skip-install
     expect(mockExecFileSync).toHaveBeenCalledWith(
       process.execPath,
-      expect.arrayContaining(['init', '.']),
+      expect.arrayContaining(['init', '.', '--skip-install']),
       expect.objectContaining({ stdio: 'inherit' }),
     );
-    expect(process.exitCode).toBeUndefined();
   });
 
-  it('propagates exit code from bundled compiler init', () => {
+  it('init bootstrap skips npm init when package.json exists', () => {
     process.argv = ['node', 'prodara', 'init', '.'];
-    mockResolveLocal.mockReturnValue(null);
-    mockRequireResolve.mockReturnValue('/cli/node_modules/@prodara/compiler/package.json');
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.1.0',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    mockResolveLocal.mockReturnValueOnce(null).mockReturnValueOnce(fakeLocal).mockReturnValue(fakeLocal);
+    // package.json exists, so npm init should be skipped
     mockExistsSync.mockImplementation((p: string) => {
-      if (p.includes('dist/cli/main.js')) return true;
+      if (p.endsWith('dist/cli/main.js')) return true;
+      return realFs.existsSync(p);
+    });
+    main();
+    // npm init should NOT have been called
+    expect(mockExecSync).not.toHaveBeenCalledWith('npm init -y', expect.anything());
+    // npm install should still be called
+    expect(mockExecSync).toHaveBeenCalledWith('npm install --save-dev @prodara/compiler', expect.objectContaining({ cwd: expect.any(String) }));
+    expect(mockExecFileSync).toHaveBeenCalled();
+  });
+
+  it('propagates exit code from compiler init delegation', () => {
+    process.argv = ['node', 'prodara', 'init', '.'];
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.1.0',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    mockResolveLocal.mockReturnValueOnce(null).mockReturnValueOnce(fakeLocal).mockReturnValue(fakeLocal);
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p.endsWith('dist/cli/main.js')) return true;
       return realFs.existsSync(p);
     });
     mockExecFileSync.mockImplementation(() => {
       const err = new Error('init failed') as Error & { status: number };
-      err.status = 1;
+      err.status = 2;
       throw err;
     });
     main();
-    expect(process.exitCode).toBe(1);
+    expect(process.exitCode).toBe(2);
   });
 
-  it('sets exit code 1 for generic init exec error', () => {
+  it('sets exit code 1 for generic init delegation error', () => {
     process.argv = ['node', 'prodara', 'init', '.'];
-    mockResolveLocal.mockReturnValue(null);
-    mockRequireResolve.mockReturnValue('/cli/node_modules/@prodara/compiler/package.json');
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.1.0',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    mockResolveLocal.mockReturnValueOnce(null).mockReturnValueOnce(fakeLocal).mockReturnValue(fakeLocal);
     mockExistsSync.mockImplementation((p: string) => {
-      if (p.includes('dist/cli/main.js')) return true;
+      if (p.endsWith('dist/cli/main.js')) return true;
       return realFs.existsSync(p);
     });
     mockExecFileSync.mockImplementation(() => { throw 'string error'; });
@@ -260,26 +296,120 @@ describe('bin', () => {
     expect(process.exitCode).toBe(1);
   });
 
-  it('falls through to error when bundled compiler entry is missing', () => {
+  it('fails when npm init fails', () => {
     process.argv = ['node', 'prodara', 'init', '.'];
     mockResolveLocal.mockReturnValue(null);
-    mockRequireResolve.mockReturnValue('/cli/node_modules/@prodara/compiler/package.json');
+    const cwd = process.cwd();
     mockExistsSync.mockImplementation((p: string) => {
-      if (p.includes('dist/cli/main.js')) return false;
+      if (p === cwd + '/package.json' || p === cwd + '\\package.json') return false;
       return realFs.existsSync(p);
     });
+    mockExecSync.mockImplementation((cmd: string) => {
+      if (cmd === 'npm init -y') throw new Error('npm failed');
+    });
     main();
-    expect(stderrOutput).toContain('Could not find a local installation');
+    expect(stderrOutput).toContain('Failed to initialize npm project');
+    expect(process.exitCode).toBe(1);
+    expect(mockExecFileSync).not.toHaveBeenCalled();
+  });
+
+  it('fails when npm install fails', () => {
+    process.argv = ['node', 'prodara', 'init', '.'];
+    mockResolveLocal.mockReturnValue(null);
+    mockExecSync.mockImplementation((cmd: string) => {
+      if (cmd.includes('npm install')) throw new Error('install failed');
+    });
+    main();
+    expect(stderrOutput).toContain('Failed to install @prodara/compiler');
+    expect(process.exitCode).toBe(1);
+    expect(mockExecFileSync).not.toHaveBeenCalled();
+  });
+
+  it('fails when compiler installs but cannot be resolved', () => {
+    process.argv = ['node', 'prodara', 'init', '.'];
+    // resolveLocal always returns null even after install
+    mockResolveLocal.mockReturnValue(null);
+    main();
+    expect(stderrOutput).toContain('could not resolve');
     expect(process.exitCode).toBe(1);
   });
 
-  it('falls through to error when bundled require.resolve fails', () => {
+  it('fails when compiler entry is missing after bootstrap', () => {
     process.argv = ['node', 'prodara', 'init', '.'];
-    mockResolveLocal.mockReturnValue(null);
-    mockRequireResolve.mockImplementation(() => { throw new Error('MODULE_NOT_FOUND'); });
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.1.0',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    // First resolveLocal: null (triggers bootstrap).
+    // bootstrapInit's internal call: returns local (bootstrap succeeds).
+    // main()'s re-resolve: returns local but cliEntry doesn't exist.
+    mockResolveLocal.mockReturnValueOnce(null).mockReturnValueOnce(fakeLocal).mockReturnValue(fakeLocal);
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p.endsWith('dist/cli/main.js')) return false;
+      return realFs.existsSync(p);
+    });
     main();
-    expect(stderrOutput).toContain('Could not find a local installation');
+    expect(stderrOutput).toContain('could not resolve');
     expect(process.exitCode).toBe(1);
+  });
+
+  it('does not add --skip-install when already present', () => {
+    process.argv = ['node', 'prodara', 'init', '.', '--skip-install'];
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.1.0',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    mockResolveLocal.mockReturnValueOnce(null).mockReturnValueOnce(fakeLocal).mockReturnValue(fakeLocal);
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p.endsWith('dist/cli/main.js')) return true;
+      return realFs.existsSync(p);
+    });
+    main();
+    // Should only have one --skip-install, not two
+    const callArgs = mockExecFileSync.mock.calls[0][1] as string[];
+    const skipCount = callArgs.filter((a: string) => a === '--skip-install').length;
+    expect(skipCount).toBe(1);
+  });
+
+  // -----------------------------------------------------------------------
+  // bootstrapInit direct tests
+  // -----------------------------------------------------------------------
+
+  it('bootstrapInit returns true on success', () => {
+    const fakeLocal = { packageDir: '/fake', version: '0.1.0', cliEntry: '/fake/dist/cli/main.js' };
+    mockResolveLocal.mockReturnValue(fakeLocal);
+    const result = bootstrapInit('/tmp/test', '0.1.0');
+    expect(result).toBe(true);
+  });
+
+  it('bootstrapInit returns false when npm init fails', () => {
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p === '/tmp/test/package.json') return false;
+      return realFs.existsSync(p);
+    });
+    mockExecSync.mockImplementation(() => { throw new Error('npm failed'); });
+    const result = bootstrapInit('/tmp/test', '0.1.0');
+    expect(result).toBe(false);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('bootstrapInit returns false when npm install fails', () => {
+    mockExecSync.mockImplementation((cmd: string) => {
+      if (cmd.includes('npm install')) throw new Error('install failed');
+    });
+    mockResolveLocal.mockReturnValue(null);
+    const result = bootstrapInit('/tmp/test', '0.1.0');
+    expect(result).toBe(false);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('bootstrapInit returns false when resolve fails after install', () => {
+    mockResolveLocal.mockReturnValue(null);
+    const result = bootstrapInit('/tmp/test', '0.1.0');
+    expect(result).toBe(false);
+    expect(stderrOutput).toContain('could not resolve');
   });
 
   // -----------------------------------------------------------------------

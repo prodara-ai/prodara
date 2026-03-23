@@ -1,0 +1,17 @@
+{
+  "phases": {},
+  "reviewFix": {
+    "maxIterations": 3
+  },
+  "reviewers": {},
+  "validation": {
+    "lint": null,
+    "typecheck": null,
+    "test": null,
+    "build": null
+  },
+  "audit": {
+    "enabled": true,
+    "path": ".prodara/runs/"
+  }
+}

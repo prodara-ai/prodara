@@ -11,17 +11,15 @@
 // finds and exec's the local compiler so users always run the version
 // pinned in their project's package.json.
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { readFileSync, existsSync, realpathSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRequire } from 'node:module';
 import pc from 'picocolors';
 import { resolveLocal, checkVersionCompatibility } from './resolve.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const require = createRequire(import.meta.url);
 
 function getWrapperVersion(): string {
   const pkgPath = resolve(__dirname, '..', 'package.json');
@@ -38,19 +36,53 @@ function getWrapperVersion(): string {
 }
 
 /**
- * Resolve the CLI entry from the compiler bundled inside @prodara/cli's own
- * node_modules.  Uses createRequire for maximum Node.js compatibility.
+ * Bootstrap a project for `prodara init` when no local compiler exists.
+ * Creates package.json if missing, installs @prodara/compiler, and returns
+ * true on success. Sets process.exitCode and returns false on failure.
  */
-function resolveBundledCompiler(): string | null {
-  try {
-    // Resolve the compiler package.json first, then derive the CLI entry
-    const pkgPath = require.resolve('@prodara/compiler/package.json');
-    const entry = resolve(dirname(pkgPath), 'dist', 'cli', 'main.js');
-    if (existsSync(entry)) return entry;
-    return null;
-  } catch {
-    return null;
+export function bootstrapInit(cwd: string, wrapperVersion: string): boolean {
+  const pkgJsonPath = join(cwd, 'package.json');
+
+  // 1. Ensure package.json exists
+  if (!existsSync(pkgJsonPath)) {
+    process.stderr.write(pc.cyan('ℹ') + ' No package.json found — running npm init...\n');
+    try {
+      execSync('npm init -y', { cwd, stdio: 'pipe' });
+      process.stderr.write(pc.green('✓') + ' Created package.json\n');
+    } catch {
+      process.stderr.write(pc.red('✗') + ' Failed to initialize npm project.\n');
+      process.stderr.write('  Run ' + pc.cyan('npm init') + ' manually, then retry.\n');
+      process.exitCode = 1;
+      return false;
+    }
   }
+
+  // 2. Install @prodara/compiler
+  process.stderr.write(pc.cyan('ℹ') + ' Installing @prodara/compiler...\n');
+  try {
+    execSync('npm install --save-dev @prodara/compiler', { cwd, stdio: 'pipe' });
+    process.stderr.write(pc.green('✓') + ' Installed @prodara/compiler\n');
+  } catch {
+    process.stderr.write(pc.red('✗') + ' Failed to install @prodara/compiler.\n');
+    process.stderr.write(
+      '  Install it manually:\n' +
+      '    ' + pc.cyan('npm install --save-dev @prodara/compiler') + '\n' +
+      '  Then run ' + pc.cyan('prodara init --skip-install') + '\n',
+    );
+    process.exitCode = 1;
+    return false;
+  }
+
+  // 3. Verify installation
+  const freshLocal = resolveLocal(cwd);
+  if (!freshLocal) {
+    process.stderr.write(pc.red('✗') + ' Installed @prodara/compiler but could not resolve it.\n');
+    process.stderr.write(`@prodara/cli v${wrapperVersion}\n`);
+    process.exitCode = 1;
+    return false;
+  }
+
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -190,13 +222,19 @@ export function main(): void {
 
   if (!local) {
     // Special-case: `prodara init` bootstraps a project even without a local
-    // compiler by delegating to the compiler bundled inside @prodara/cli's
-    // own node_modules (it's a production dependency).
+    // compiler. We install @prodara/compiler locally first, then delegate to
+    // the now-local compiler's init (with --skip-install since we did it).
     if (args[0] === 'init') {
-      const bundledEntry = resolveBundledCompiler();
-      if (bundledEntry) {
+      const installed = bootstrapInit(cwd, wrapperVersion);
+      if (!installed) return; // bootstrapInit sets exitCode on failure
+
+      // Re-resolve the just-installed compiler and delegate
+      const freshLocal = resolveLocal(cwd);
+      if (freshLocal && existsSync(freshLocal.cliEntry)) {
+        // Append --skip-install so the compiler's init doesn't redo npm/install
+        const initArgs = args.includes('--skip-install') ? args : [...args, '--skip-install'];
         try {
-          execFileSync(process.execPath, [bundledEntry, ...args], {
+          execFileSync(process.execPath, [freshLocal.cliEntry, ...initArgs], {
             cwd,
             stdio: 'inherit',
             env: process.env,
@@ -210,7 +248,11 @@ export function main(): void {
         }
         return;
       }
-      // Bundled compiler missing (shouldn't happen) — fall through to error
+
+      // Shouldn't reach here — resolution just succeeded in bootstrapInit
+      process.stderr.write(pc.red('Error: Compiler installed but could not resolve its CLI entry.\n'));
+      process.exitCode = 1;
+      return;
     }
 
     process.stderr.write(

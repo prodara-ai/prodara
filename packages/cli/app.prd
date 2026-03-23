@@ -1,0 +1,15 @@
+product my_app {
+  title: "My App"
+  version: "0.1.0"
+  modules: [core]
+}
+
+module core {
+
+  entity item {
+    id: uuid
+    title: string
+    done: boolean = false
+  }
+
+}

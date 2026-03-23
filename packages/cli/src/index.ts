@@ -3,4 +3,4 @@
 // ---------------------------------------------------------------------------
 export { resolveLocal, parseSemver, checkVersionCompatibility } from './resolve.js';
 export type { LocalResolution } from './resolve.js';
-export { printHelp, printVersion } from './bin.js';
+export { printHelp, printVersion, bootstrapInit } from './bin.js';

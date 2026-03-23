@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 
 import { describe, it, expect } from 'vitest';
-import { resolveLocal, parseSemver, checkVersionCompatibility, printHelp, printVersion } from '../src/index.js';
+import { resolveLocal, parseSemver, checkVersionCompatibility, printHelp, printVersion, bootstrapInit } from '../src/index.js';
 
 describe('index', () => {
   it('re-exports resolveLocal', () => {
@@ -24,5 +24,9 @@ describe('index', () => {
 
   it('re-exports printVersion', () => {
     expect(typeof printVersion).toBe('function');
+  });
+
+  it('re-exports bootstrapInit', () => {
+    expect(typeof bootstrapInit).toBe('function');
   });
 });
