@@ -12,7 +12,7 @@
 // pinned in their project's package.json.
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
@@ -262,7 +262,9 @@ export function main(): void {
   }
 }
 
-/* v8 ignore next 3 -- auto-invoked entry point */
-if (process.argv[1] && resolve(process.argv[1]) === __filename) {
-  main();
+/* v8 ignore next 5 -- auto-invoked entry point */
+try {
+  if (process.argv[1] && realpathSync(process.argv[1]) === __filename) main();
+} catch {
+  // realpathSync may fail if argv[1] is not a real path
 }
