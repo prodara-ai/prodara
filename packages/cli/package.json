@@ -1,6 +1,6 @@
 {
   "name": "@prodara/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Prodara CLI — thin wrapper that delegates to the project-local @prodara/compiler",
   "author": "Prodara Contributors",
   "repository": {
