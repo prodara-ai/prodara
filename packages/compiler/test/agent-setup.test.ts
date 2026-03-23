@@ -96,15 +96,23 @@ describe('Agent Setup', () => {
   });
 
   describe('generateSlashCommands', () => {
-    it('generates 30 slash commands for claude', () => {
+    it('generates 29 slash commands for claude', () => {
       const root = makeTempDir();
       const commands = generateSlashCommands('claude', root, 'my_app');
       expect(commands).toHaveLength(29);
       for (const cmd of commands) {
-        expect(cmd.path).toContain('.claude/commands/prodara-');
+        expect(cmd.path).toContain('.claude/commands/prodara');
         expect(cmd.path).toMatch(/\.md$/);
         expect(cmd.content).toContain('# Prodara:');
       }
+    });
+
+    it('generates main prompt as prodara.md (not prodara-build.md) for claude', () => {
+      const root = makeTempDir();
+      const commands = generateSlashCommands('claude', root, 'my_app');
+      const buildCmd = commands.find(c => c.content.includes('Full Build Pipeline'));
+      expect(buildCmd).toBeDefined();
+      expect(buildCmd!.path).toMatch(/\/prodara\.md$/);
     });
 
     it('generates copilot commands with YAML frontmatter', () => {
@@ -112,7 +120,7 @@ describe('Agent Setup', () => {
       const commands = generateSlashCommands('copilot', root, 'my_app');
       expect(commands).toHaveLength(29);
       for (const cmd of commands) {
-        expect(cmd.path).toContain('.github/prompts/prodara-');
+        expect(cmd.path).toContain('.github/prompts/prodara');
         expect(cmd.path).toMatch(/\.prompt\.md$/);
         expect(cmd.content).toContain('---');
         expect(cmd.content).toContain('mode: agent');
@@ -120,12 +128,20 @@ describe('Agent Setup', () => {
       }
     });
 
+    it('generates main prompt as prodara.prompt.md for copilot', () => {
+      const root = makeTempDir();
+      const commands = generateSlashCommands('copilot', root, 'my_app');
+      const buildCmd = commands.find(c => c.content.includes('Full Build Pipeline'));
+      expect(buildCmd).toBeDefined();
+      expect(buildCmd!.path).toMatch(/\/prodara\.prompt\.md$/);
+    });
+
     it('generates cursor commands with YAML frontmatter', () => {
       const root = makeTempDir();
       const commands = generateSlashCommands('cursor', root, 'my_app');
       expect(commands).toHaveLength(29);
       for (const cmd of commands) {
-        expect(cmd.path).toContain('.cursor/rules/prodara-');
+        expect(cmd.path).toContain('.cursor/rules/prodara');
         expect(cmd.path).toMatch(/\.mdc$/);
         expect(cmd.content).toContain('---');
         expect(cmd.content).toContain('globs:');
@@ -146,7 +162,7 @@ describe('Agent Setup', () => {
       const commands = generateSlashCommands('generic', root, 'my_app', '.myagent/cmds');
       expect(commands).toHaveLength(29);
       for (const cmd of commands) {
-        expect(cmd.path).toContain('.myagent/cmds/prodara-');
+        expect(cmd.path).toContain('.myagent/cmds/prodara');
       }
     });
 
@@ -162,6 +178,8 @@ describe('Agent Setup', () => {
       const root = makeTempDir();
       const commands = generateSlashCommands('claude', root, 'my_app');
       const slugs = commands.map(c => {
+        const mainMatch = c.path.match(/\/prodara\.\w/);
+        if (mainMatch) return 'build';
         const match = c.path.match(/prodara-([\w-]+)\./);
         return match?.[1];
       });

@@ -21,8 +21,8 @@ The compiler takes `.prd` specification files through a 13-phase pipeline:
 
 ### Implementation Phase
 
-The primary way to build is through your AI agent — `prodara init` generates agent prompts
-(`.github/prompts/prodara-build.prompt.md`), slash commands, and copilot-instructions that
+The primary way to build is through your AI agent — `prodara init` generates the
+`@prodara` agent prompt (`.github/prompts/prodara.prompt.md`), slash commands, and copilot-instructions that
 drive the full build pipeline. The agent uses `prodara build` under the hood. The implement phase:
 
 - Extracts implementation instructions from the workflow engine

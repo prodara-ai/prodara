@@ -41,8 +41,7 @@ cd my-product
 code .
 
 # Your AI agent builds using the generated prompts:
-#   @prodara-build in Copilot Chat
-#   /prodara:build slash command
+#   @prodara in Copilot Chat — just describe what you want
 #   or run directly:
 prodara build
 prodara build --dry-run    # Preview implementation tasks without executing
@@ -275,7 +274,7 @@ prodara preset remove <name>        # Remove preset
 
 Prodara is built for AI agents. The `prodara init` command generates everything your agent needs:
 
-- **Agent prompts** (`.github/prompts/prodara-build.prompt.md`) — the primary build workflow
+- **Agent prompt** (`.github/prompts/prodara.prompt.md`) — type `@prodara` and describe what you want
 - **Copilot instructions** (`.github/copilot-instructions.md`) — project-level context for Copilot
 - **29 slash commands** — Build, validate, plan, implement, review, explore, and more
 

@@ -27,4 +27,4 @@ The recommended workflow for building with Prodara is:
 
 ## Agent Prompts
 
-Use the `prodara-build` prompt (`.github/prompts/prodara-build.prompt.md`) for the primary build workflow. Run `prodara init --ai copilot` to generate all 29 slash command prompts.
+Use the `@prodara` prompt (`.github/prompts/prodara.prompt.md`) for the primary build workflow — just type `@prodara` followed by what you want to build. Run `prodara init --ai copilot` to generate all 29 additional slash command prompts.

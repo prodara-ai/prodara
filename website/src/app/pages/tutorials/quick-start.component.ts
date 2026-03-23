@@ -9,13 +9,11 @@ import { CalloutComponent } from '../../components/callout.component';
   template: `
     <div class="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
       <div class="mb-4 inline-flex items-center gap-2 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-300">
-        Beginner &middot; ~5 minutes
+        Beginner &middot; ~3 minutes
       </div>
       <h1 class="text-3xl font-bold tracking-tight text-surface-950">Quick Start</h1>
       <p class="mt-4 text-lg text-surface-600">
-        Set up your environment, create a project, and build with your AI agent — all in about 5 minutes.
-        <strong class="text-surface-900">Your AI agent is the primary builder</strong> — Prodara generates
-        the prompts, slash commands, and skills it needs.
+        Three steps. That's it. Initialize a project, open your IDE, and tell your AI agent what to build.
       </p>
 
       <!-- Progress -->
@@ -34,131 +32,71 @@ import { CalloutComponent } from '../../components/callout.component';
       </nav>
 
       <!-- Step 1 -->
-      <section class="mt-14" id="vscode">
+      <section class="mt-14" id="install">
         <h2 class="flex items-center gap-3 text-2xl font-bold text-surface-950">
           <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary-600 text-sm font-bold text-white shadow-md shadow-primary-500/20">1</span>
-          Install the VS Code Extension
+          Install &amp; Initialize
         </h2>
-        <p class="mt-4 text-surface-700">
-          The <strong class="text-surface-900">Prodara VS Code extension</strong> is the easiest way to work with Prodara.
-          It gives you syntax highlighting, real-time diagnostics, and autocomplete for <code>.prd</code> files.
-        </p>
+        <p class="mt-4 text-surface-700">Install the CLI and create a project:</p>
+        <app-code-block code="npm install -g @prodara/cli\nprodara init my-app\ncd my-app" language="bash" />
         <p class="mt-3 text-surface-700">
-          Open VS Code, go to the Extensions panel (<code>Cmd+Shift+X</code>), and search for <strong class="text-surface-900">Prodara</strong>. Click Install.
+          That's all the CLI does — it scaffolds a <code>.prd</code> spec file and configures your AI agent automatically.
+          The Prodara VS Code extension (optional) gives you syntax highlighting and real-time diagnostics.
         </p>
         <app-callout variant="tip">
-          The VS Code extension is powered by the Prodara Language Server (LSP).
-          Your AI agent (GitHub Copilot, Claude, Cursor, etc.) gets full language support automatically.
+          5 templates are available: <code>minimal</code>, <code>saas</code>, <code>marketplace</code>,
+          <code>internal-tool</code>, and <code>api</code>. Use <code>--template saas</code> to start with a richer spec.
         </app-callout>
       </section>
 
       <!-- Step 2 -->
-      <section class="mt-14" id="install">
+      <section class="mt-14" id="build">
         <h2 class="flex items-center gap-3 text-2xl font-bold text-surface-950">
           <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary-600 text-sm font-bold text-white shadow-md shadow-primary-500/20">2</span>
-          Install the CLI
+          Open Your IDE &amp; Build
         </h2>
-        <p class="mt-4 text-surface-700">Install the Prodara CLI globally via npm:</p>
-        <app-code-block code="npm install -g @prodara/cli" language="bash" />
-        <p class="mt-2 text-surface-700">Verify the installation:</p>
-        <app-code-block code="prodara --version\n# 0.1.0" language="bash" />
+        <p class="mt-4 text-surface-700">Open the project and tell your agent what to build:</p>
+        <app-code-block code="code my-app" language="bash" />
+        <p class="mt-3 text-surface-700">
+          In Copilot Chat (or any AI agent), just say:
+        </p>
+        <app-code-block [code]="buildPrompt" language="text" filename="Copilot Chat" />
+        <p class="mt-3 text-surface-700">
+          Your agent handles everything — it writes the <code>.prd</code> spec, runs the compiler, and implements the code.
+          No need to learn any commands or syntax. The agent already knows how Prodara works.
+        </p>
         <app-callout variant="info">
-          You need Node.js 18+ installed. If you don't have it, visit
-          <a href="https://nodejs.org" target="_blank" rel="noopener" class="underline font-medium">nodejs.org</a>.
+          <code>prodara init</code> generates an <code>&#64;prodara</code> prompt and
+          copilot-instructions automatically. Your agent is ready to build from the moment you open the project.
         </app-callout>
       </section>
 
       <!-- Step 3 -->
-      <section class="mt-14" id="scaffold">
+      <section class="mt-14" id="iterate">
         <h2 class="flex items-center gap-3 text-2xl font-bold text-surface-950">
           <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary-600 text-sm font-bold text-white shadow-md shadow-primary-500/20">3</span>
-          Create a Project
-        </h2>
-        <p class="mt-4 text-surface-700">Scaffold a new project from a template:</p>
-        <app-code-block code="prodara init my-first-app --template minimal\ncd my-first-app" language="bash" />
-        <p class="mt-3 text-surface-700">
-          This creates a directory with a single <code>app.prd</code> file - the simplest possible Prodara spec.
-        </p>
-        <app-callout variant="tip">
-          5 templates are available: <code>minimal</code>, <code>saas</code>, <code>marketplace</code>,
-          <code>internal-tool</code>, and <code>api</code>. Start with <code>minimal</code> for learning.
-        </app-callout>
-      </section>
-
-      <!-- Step 4 -->
-      <section class="mt-14" id="build">
-        <h2 class="flex items-center gap-3 text-2xl font-bold text-surface-950">
-          <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary-600 text-sm font-bold text-white shadow-md shadow-primary-500/20">4</span>
-          Build with Your AI Agent
+          Iterate
         </h2>
         <p class="mt-4 text-surface-700">
-          Open the project in VS Code. The <code>prodara init</code> command generated agent prompts in
-          <code>.github/prompts/</code> and a <code>copilot-instructions.md</code> — your AI agent already knows
-          how to build Prodara projects.
+          Want to change something? Just ask:
         </p>
-        <app-code-block code="code my-first-app" language="bash" />
+        <app-code-block [code]="iteratePrompt" language="text" filename="Copilot Chat" />
         <p class="mt-3 text-surface-700">
-          <strong class="text-surface-900">Use the agent prompt to build:</strong> Open Copilot Chat (or your AI agent)
-          and use the <code>prodara-build</code> prompt. The agent will validate, compile, and implement your spec.
+          The agent updates the spec, rebuilds, and implements the changes. The VS Code extension shows
+          real-time validation so you and your agent catch errors instantly.
         </p>
-        <app-code-block [code]="buildPrompt" language="text" filename="In Copilot Chat" />
-        <p class="mt-3 text-surface-700">
-          Alternatively, use the slash commands generated by <code>prodara init --ai copilot</code>:
-        </p>
-        <app-code-block code="/prodara:build    # Full pipeline\n/prodara:validate  # Type-check only\n/prodara:plan      # Generate incremental plan" language="text" filename="Slash Commands" />
-        <p class="mt-3 text-surface-700">
-          The build pipeline validates your spec through 13 compiler phases, produces a
-          deterministic Product Graph, generates an incremental plan, and builds code.
-        </p>
-        <ul class="mt-3 space-y-2 text-surface-700">
-          <li class="flex gap-2"><span class="text-primary-600 font-bold">&bull;</span> <strong class="text-surface-900">Product Graph</strong> — all entities, workflows, surfaces, and governance as JSON</li>
-          <li class="flex gap-2"><span class="text-primary-600 font-bold">&bull;</span> <strong class="text-surface-900">Incremental Plan</strong> — exactly what changed and what needs updating</li>
-          <li class="flex gap-2"><span class="text-primary-600 font-bold">&bull;</span> <strong class="text-surface-900">Generated Code</strong> — production-ready code from your spec</li>
-        </ul>
-        <app-callout variant="tip">
-          You can also run <code>prodara build .</code> directly in the terminal, but the agent-driven
-          workflow is the recommended way to build Prodara projects — your agent handles validation,
-          error fixing, and implementation in one flow.
-        </app-callout>
       </section>
 
-      <!-- Step 5 -->
-      <section class="mt-14" id="agent">
+      <!-- CLI reference (collapsed) -->
+      <section class="mt-14" id="cli">
         <h2 class="flex items-center gap-3 text-2xl font-bold text-surface-950">
-          <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary-600 text-sm font-bold text-white shadow-md shadow-primary-500/20">5</span>
-          Iterate with Your Agent
+          <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-surface-300 text-sm font-bold text-white shadow-md">?</span>
+          Optional: CLI Reference
         </h2>
         <p class="mt-4 text-surface-700">
-          Now evolve the spec. Ask your AI agent to add features — it already has the Prodara context:
+          Most users never need these — your agent runs them for you. But if you want to run commands manually:
         </p>
-        <app-code-block [code]="agentPrompt" language="text" filename="Agent prompt" />
-        <p class="mt-3 text-surface-700">
-          The agent edits <code>app.prd</code> directly. The VS Code extension validates changes
-          in real-time and shows errors inline — creating a <strong class="text-surface-900">review loop</strong>
-          between you, your AI agent, and the Prodara compiler.
-        </p>
-        <p class="mt-3 text-surface-700">
-          After your agent makes changes, use the build prompt or slash command again to rebuild:
-        </p>
-        <app-code-block code="/prodara:build" language="text" />
-        <app-callout variant="info">
-          The agent prompts and slash commands are the primary way to work with Prodara.
-          Most users never need to run CLI commands directly — the agent handles everything.
-        </app-callout>
-      </section>
-
-      <!-- Step 6 -->
-      <section class="mt-14" id="test">
-        <h2 class="flex items-center gap-3 text-2xl font-bold text-surface-950">
-          <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary-600 text-sm font-bold text-white shadow-md shadow-primary-500/20">6</span>
-          Run Tests
-        </h2>
-        <p class="mt-4 text-surface-700">Run the spec-level tests:</p>
-        <app-code-block code="prodara test ." language="bash" />
-        <p class="mt-3 text-surface-700">
-          Tests validate assertions against the compiled Product Graph. In the minimal template,
-          the test checks that the <code>task</code> entity exists and has kind <code>"entity"</code>.
-        </p>
+        <app-code-block code="prodara build          # Full pipeline\nprodara validate       # Type-check .prd files\nprodara test .         # Run spec tests\nprodara diff           # Show what changed" language="bash" />
       </section>
 
       <!-- Next steps -->
@@ -183,7 +121,7 @@ import { CalloutComponent } from '../../components/callout.component';
               <a routerLink="/docs/agent-integration" class="font-semibold text-primary-600 hover:underline">
                 AI Agent Workflows
               </a>
-              <span class="text-surface-600"> - Learn how to drive Prodara from any AI agent</span>
+              <span class="text-surface-600"> - Configure Prodara for Claude, Cursor, Gemini, and 23 more agents</span>
             </div>
           </li>
           <li class="flex gap-2">
@@ -202,20 +140,14 @@ import { CalloutComponent } from '../../components/callout.component';
 })
 export class QuickStartComponent {
   readonly steps = [
-    { num: 1, anchor: 'vscode', label: 'Install the VS Code Extension' },
-    { num: 2, anchor: 'install', label: 'Install the CLI' },
-    { num: 3, anchor: 'scaffold', label: 'Create a Project' },
-    { num: 4, anchor: 'build', label: 'Build with Your AI Agent' },
-    { num: 5, anchor: 'agent', label: 'Iterate with Your Agent' },
-    { num: 6, anchor: 'test', label: 'Run Tests' },
+    { num: 1, anchor: 'install', label: 'Install & Initialize' },
+    { num: 2, anchor: 'build', label: 'Open Your IDE & Build' },
+    { num: 3, anchor: 'iterate', label: 'Iterate' },
   ];
 
-  readonly agentPrompt = `"Add a 'priority' field of type string to the task entity,
-with possible values: low, medium, high.
-Default to medium. Also add a workflow to
-change the priority of a task."`;
+  readonly buildPrompt = `@prodara Build me a ToDo application with tasks,
+due dates, and priority levels.`;
 
-  readonly buildPrompt = `@prodara-build Build the current Prodara project.
-Validate all .prd files, generate the Product Graph,
-and implement the code.`;
+  readonly iteratePrompt = `@prodara Add a "completed" filter and a
+workflow to archive old tasks.`;
 }

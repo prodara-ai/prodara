@@ -93,7 +93,7 @@ import { RouterLink } from '@angular/router';
       <p class="text-surface-600">
         New to Prodara? Start with the
         <a routerLink="/tutorials/quick-start" class="text-primary-600 hover:underline">Quick Start tutorial</a>
-        — run <code>prodara init</code>, open in VS Code, and let your AI agent handle the build.
+        — run <code>prodara init</code>, open your IDE, and type <code>&#64;prodara</code> to start building.
         Or explore the
         <a routerLink="/docs/architecture" class="text-primary-600 hover:underline">Architecture guide</a>
         to understand the 13-phase compiler pipeline.

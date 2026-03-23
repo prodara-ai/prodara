@@ -18,12 +18,12 @@ import { RouterLink } from '@angular/router';
           class="group block rounded-xl border border-surface-200 bg-surface-50 p-6 transition hover:border-primary-300 hover:shadow-lg"
         >
           <div class="mb-3 inline-flex items-center gap-2 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-300">
-            Beginner &middot; ~5 min
+            Beginner &middot; ~3 min
           </div>
           <h2 class="text-xl font-semibold text-surface-950 group-hover:text-primary-600">Quick Start</h2>
           <p class="mt-2 text-sm text-surface-600">
-            Run <code>prodara init</code>, open in VS Code, and let your AI agent build your first project.
-            Agent prompts and slash commands are generated automatically — no Prodara syntax knowledge required.
+            Run <code>prodara init</code>, open your IDE, and type <code>&#64;prodara</code> followed by what you want to build.
+            Three steps — that's it.
           </p>
           <div class="mt-4 flex items-center gap-2 text-sm font-medium text-primary-600">
             Start tutorial

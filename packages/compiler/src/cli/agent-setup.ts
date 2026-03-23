@@ -844,7 +844,9 @@ export function generateSlashCommands(
   const files: SlashCommandFile[] = [];
 
   for (const cmd of commands) {
-    const fileName = `prodara-${cmd.slug}${config.commandExtension}`;
+    const fileName = cmd.slug === 'build'
+      ? `prodara${config.commandExtension}`
+      : `prodara-${cmd.slug}${config.commandExtension}`;
     const filePath = join(root, commandsDir, fileName);
     const content = renderCommandFile(config, cmd);
     files.push({ path: filePath, content });
