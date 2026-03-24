@@ -890,11 +890,11 @@ function renderCommandFile(config: AgentCommandConfig, cmd: CommandDef): string 
   if (config.frontmatterStyle === 'yaml') {
     sections.push('---');
     if (config.agentId === 'copilot') {
+      if (cmd.slug === 'build') {
+        sections.push('name: Prodara');
+      }
+      sections.push(`description: "${cmd.description}"`);
       sections.push('mode: agent');
-      sections.push('tools:');
-      sections.push('  - terminal');
-      sections.push('  - file_search');
-      sections.push('  - read_file');
     }
     if (config.agentId === 'cursor') {
       sections.push(`description: "${cmd.description}"`);

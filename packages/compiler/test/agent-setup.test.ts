@@ -124,17 +124,29 @@ describe('Agent Setup', () => {
         expect(cmd.path).toContain('.github/prompts/prodara');
         expect(cmd.path).toMatch(/\.prompt\.md$/);
         expect(cmd.content).toContain('---');
+        expect(cmd.content).toContain('description:');
         expect(cmd.content).toContain('mode: agent');
-        expect(cmd.content).toContain('tools:');
+        expect(cmd.content).not.toContain('tools:');
       }
     });
 
-    it('generates main prompt as prodara.prompt.md for copilot', () => {
+    it('generates main prompt as prodara.prompt.md for copilot with name field', () => {
       const root = makeTempDir();
       const commands = generateSlashCommands('copilot', root, 'my_app');
       const buildCmd = commands.find(c => c.content.includes('Full Build Pipeline'));
       expect(buildCmd).toBeDefined();
       expect(buildCmd!.path).toMatch(/\/prodara\.prompt\.md$/);
+      expect(buildCmd!.content).toContain('name: Prodara');
+    });
+
+    it('copilot non-build commands do not include name field', () => {
+      const root = makeTempDir();
+      const commands = generateSlashCommands('copilot', root, 'my_app');
+      const nonBuildCmds = commands.filter(c => !c.content.includes('Full Build Pipeline'));
+      expect(nonBuildCmds.length).toBeGreaterThan(0);
+      for (const cmd of nonBuildCmds) {
+        expect(cmd.content).not.toContain('name: Prodara');
+      }
     });
 
     it('generates cursor commands with YAML frontmatter', () => {
