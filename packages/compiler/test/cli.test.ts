@@ -575,17 +575,19 @@ describe('init command', () => {
       expect(stdoutOutput).toContain('Created .prodara/reviewers/');
       expect(process.exitCode).toBe(0);
 
-      // Verify reviewer file was scaffolded
-      const reviewerFile = join(tmpDir, '.prodara', 'reviewers', 'performance.md');
-      expect(existsSync(reviewerFile)).toBe(true);
-      expect(readFileSync(reviewerFile, 'utf-8')).toContain('Performance Reviewer');
+      // Verify all reviewer files were scaffolded
+      for (const name of ['architecture', 'security', 'code-quality', 'test-quality', 'ux-quality', 'adversarial', 'edge-case', 'performance']) {
+        expect(existsSync(join(tmpDir, '.prodara', 'reviewers', `${name}.md`))).toBe(true);
+      }
+      expect(readFileSync(join(tmpDir, '.prodara', 'reviewers', 'performance.md'), 'utf-8')).toContain('Performance Reviewer');
+      expect(readFileSync(join(tmpDir, '.prodara', 'reviewers', 'security.md'), 'utf-8')).toContain('Security Reviewer');
 
-      // Verify config includes reviewer entries
+      // Verify config includes reviewer entries with promptPath
       const config = JSON.parse(readFileSync(join(tmpDir, 'prodara.config.json'), 'utf-8'));
-      expect(config.reviewers.architecture).toEqual({ enabled: true });
-      expect(config.reviewers.security).toEqual({ enabled: true });
+      expect(config.reviewers.architecture).toEqual({ enabled: true, promptPath: '.prodara/reviewers/architecture.md' });
+      expect(config.reviewers.security).toEqual({ enabled: true, promptPath: '.prodara/reviewers/security.md' });
       expect(config.reviewers.performance).toEqual({ enabled: true, promptPath: '.prodara/reviewers/performance.md' });
-      expect(config.reviewers.adversarial).toEqual({ enabled: false });
+      expect(config.reviewers.adversarial).toEqual({ enabled: false, promptPath: '.prodara/reviewers/adversarial.md' });
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
@@ -750,7 +752,7 @@ describe('upgrade command', () => {
     }
   });
 
-  it('creates performance.md reviewer when missing', async () => {
+  it('creates all reviewer skill files when missing', async () => {
     const { mkdtempSync, mkdirSync: fsMkdir, rmSync, existsSync, readFileSync: fsRead } = await import('node:fs');
     const { join } = await import('node:path');
     const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
@@ -758,10 +760,13 @@ describe('upgrade command', () => {
       fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
       const program = createProgram();
       await runCommand(program, ['upgrade', tmpDir, '--skip-install']);
-      const reviewerFile = join(tmpDir, '.prodara', 'reviewers', 'performance.md');
-      expect(existsSync(reviewerFile)).toBe(true);
-      expect(fsRead(reviewerFile, 'utf-8')).toContain('Performance Reviewer');
+      for (const name of ['architecture', 'security', 'code-quality', 'test-quality', 'ux-quality', 'adversarial', 'edge-case', 'performance']) {
+        expect(existsSync(join(tmpDir, '.prodara', 'reviewers', `${name}.md`))).toBe(true);
+      }
+      expect(fsRead(join(tmpDir, '.prodara', 'reviewers', 'performance.md'), 'utf-8')).toContain('Performance Reviewer');
+      expect(fsRead(join(tmpDir, '.prodara', 'reviewers', 'architecture.md'), 'utf-8')).toContain('Architecture Reviewer');
       expect(stdoutOutput).toContain('performance.md');
+      expect(stdoutOutput).toContain('architecture.md');
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
@@ -804,7 +809,7 @@ describe('upgrade command', () => {
       await runCommand(program, ['upgrade', tmpDir, '--skip-install']);
       expect(existsSync(join(tmpDir, 'prodara.config.json'))).toBe(true);
       const config = JSON.parse(fsRead(join(tmpDir, 'prodara.config.json'), 'utf-8'));
-      expect(config.reviewers.architecture).toEqual({ enabled: true });
+      expect(config.reviewers.architecture).toEqual({ enabled: true, promptPath: '.prodara/reviewers/architecture.md' });
       expect(stdoutOutput).toContain('Created prodara.config.json');
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
@@ -994,18 +999,21 @@ describe('upgrade command', () => {
     try {
       fsMkdir(join(tmpDir, '.prodara', 'runs'), { recursive: true });
       fsMkdir(join(tmpDir, '.prodara', 'reviewers'), { recursive: true });
-      fsWrite(join(tmpDir, '.prodara', 'reviewers', 'performance.md'), '# Performance Reviewer\n', 'utf-8');
+      // Pre-create all reviewer files so none are "missing"
+      for (const name of ['architecture', 'security', 'code-quality', 'test-quality', 'ux-quality', 'adversarial', 'edge-case', 'performance']) {
+        fsWrite(join(tmpDir, '.prodara', 'reviewers', `${name}.md`), `# ${name} Reviewer\n`, 'utf-8');
+      }
       fsWrite(join(tmpDir, 'prodara.config.json'), JSON.stringify({
         phases: {},
         reviewFix: { maxIterations: 3 },
         reviewers: {
-          architecture: { enabled: true },
-          security: { enabled: true },
-          codeQuality: { enabled: true },
-          testQuality: { enabled: true },
-          uxQuality: { enabled: true },
-          adversarial: { enabled: false },
-          edgeCase: { enabled: false },
+          architecture: { enabled: true, promptPath: '.prodara/reviewers/architecture.md' },
+          security: { enabled: true, promptPath: '.prodara/reviewers/security.md' },
+          codeQuality: { enabled: true, promptPath: '.prodara/reviewers/code-quality.md' },
+          testQuality: { enabled: true, promptPath: '.prodara/reviewers/test-quality.md' },
+          uxQuality: { enabled: true, promptPath: '.prodara/reviewers/ux-quality.md' },
+          adversarial: { enabled: false, promptPath: '.prodara/reviewers/adversarial.md' },
+          edgeCase: { enabled: false, promptPath: '.prodara/reviewers/edge-case.md' },
           performance: { enabled: true, promptPath: '.prodara/reviewers/performance.md' },
         },
         validation: { lint: null, typecheck: null, test: null, build: null },

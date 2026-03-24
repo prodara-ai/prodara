@@ -42,6 +42,190 @@ import { generateDocs, writeDocs } from '../doc-gen/index.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// ---------------------------------------------------------------------------
+// Built-in reviewer skill file templates
+// ---------------------------------------------------------------------------
+
+export const REVIEWER_TEMPLATES: ReadonlyMap<string, string> = new Map([
+  ['architecture', `---
+name: Architecture Reviewer
+perspective: System design, module boundaries, and dependency patterns
+---
+
+Review the specification and implementation for architectural concerns.
+
+## Focus Areas
+- Validate module boundaries — each module should have a clear, single responsibility
+- Check for empty modules with no entities or workflows — suggest merging or populating
+- Verify authorization coverage on all data-modifying workflows
+- Flag high cross-module coupling (excessive inter-module dependencies)
+- Ensure dependency direction flows from high-level to low-level modules
+- Check that shared entities are properly imported, not duplicated across modules
+
+## Severity Guide
+- Critical: circular module dependencies, authorization bypass paths
+- High: missing authorization on data-modifying workflows, broken module boundaries
+- Medium: empty modules, high coupling between unrelated modules
+- Low: minor structural suggestions, naming improvements
+`],
+  ['security', `---
+name: Security Reviewer
+perspective: Application security, authorization, and data protection
+---
+
+Review the specification and implementation for security vulnerabilities.
+
+## Focus Areas
+- Verify authorization on ALL data-modifying workflows — no unprotected writes
+- Check for sensitive fields (password, secret, token, api_key, credit_card, ssn) without access control
+- Ensure published events and exposed APIs have authorization edges
+- Validate input sanitization on user-facing surfaces and API endpoints
+- Check for credential leaks — no hardcoded secrets, tokens, or API keys
+- Verify that sensitive data is never logged or included in error responses
+- Check CORS, CSRF, and rate limiting configuration where applicable
+
+## Severity Guide
+- Critical: exploitable vulnerability, credential leak, SQL injection, XSS
+- High: missing authorization on writes, unsanitized user input, exposed sensitive fields
+- Medium: missing rate limiting, overly permissive CORS, weak password rules
+- Low: informational security best practices
+`],
+  ['code-quality', `---
+name: Code Quality Reviewer
+perspective: Engineering craft, graph integrity, and code structure
+---
+
+Review the specification and implementation for code quality issues.
+
+## Focus Areas
+- Check for orphan nodes with no edges — may indicate unused or disconnected code
+- Validate all edge references — source and target nodes must exist
+- Flag duplicate edges (same from, to, kind)
+- Look for code duplication and opportunities for reuse
+- Check error handling — all failure paths should be covered
+- Verify naming conventions — consistent casing and descriptive names
+- Ensure readability — clear variable names, reasonable function length
+
+## Severity Guide
+- Critical: invalid edge references (broken graph integrity)
+- High: duplicate edges, major code duplication, missing error handling
+- Medium: orphan nodes, inconsistent naming conventions
+- Low: minor readability improvements, style suggestions
+`],
+  ['test-quality', `---
+name: Test Quality Reviewer
+perspective: Test coverage, test design, and quality assurance
+---
+
+Review the specification and implementation for test quality.
+
+## Focus Areas
+- Verify every module with entities has corresponding spec tests
+- Check test-to-entity ratio — each entity should have at least one test
+- Flag untested workflows, especially data-modifying ones
+- Ensure products with >3 entities have at least some spec tests
+- Check that modified code has corresponding test updates
+- Look for fragile tests that depend on implementation details
+- Verify edge case coverage — empty inputs, boundaries, error paths
+
+## Severity Guide
+- Critical: product with many entities and zero tests
+- High: data-modifying workflows without any tests, changes without test updates
+- Medium: low test-to-entity ratio, missing module-level tests
+- Low: untested read-only workflows, minor coverage gaps
+`],
+  ['ux-quality', `---
+name: UX Quality Reviewer
+perspective: User experience completeness and interaction design
+---
+
+Review the specification and implementation for UX completeness.
+
+## Focus Areas
+- Verify all surfaces have rendering edges — otherwise they have no visual definition
+- Check that modules with surfaces define design tokens for consistent styling
+- Ensure all renderings are bound to a surface — no orphaned visual components
+- Verify forms have validation rules for data integrity
+- Check for loading states, error states, and empty states on all surfaces
+- Ensure keyboard navigation and focus management are addressed
+- Validate that user-facing error messages are helpful and non-technical
+
+## Severity Guide
+- Critical: surfaces with no way to render, forms that accept invalid data
+- High: unbound renderings, missing validation on write actions
+- Medium: missing design tokens, missing loading/error states
+- Low: minor UX polish suggestions, accessibility improvements
+`],
+  ['adversarial', `---
+name: Adversarial Reviewer
+perspective: Cynical gap detection — assumes problems exist and finds them
+---
+
+Review the specification and implementation with maximum skepticism.
+
+## Focus Areas
+- Flag modules with entities but no policies or rules — data integrity is unguarded
+- Identify untested modules — correctness is unverified
+- Find orphan entities with no edges — may be unused dead code
+- Check workflows with no output (no emits/writes) — side effects are unstated
+- Detect duplicate node names within the same module — ambiguous references
+- Question every assumption — if it is not explicitly stated, it is a gap
+- Look for contradictions between spec and implementation
+
+## Severity Guide
+- Critical: duplicate names causing ambiguity, contradictions in spec
+- High: unguarded data integrity, untested modules, orphan entities
+- Medium: workflows with no declared output
+- Low: unstated assumptions that should be documented
+`],
+  ['edge-case', `---
+name: Edge Case Reviewer
+perspective: Boundary conditions, error paths, and race conditions
+---
+
+Review the specification and implementation for missing edge cases.
+
+## Focus Areas
+- Check for empty entity schemas — what represents their state?
+- Verify workflows that read data have error paths — what if entity not found?
+- Flag modules with a single entity and no workflows — no behavior defined
+- Find dead events — emitted but never subscribed to (messages lost)
+- Identify unused actors not referenced by any workflow authorization
+- Check boundary conditions — max lengths, zero values, empty collections
+- Verify concurrent access patterns — race conditions on shared state
+- Ensure graceful degradation when external dependencies fail
+
+## Severity Guide
+- Critical: race conditions that could corrupt data
+- High: missing error paths on data reads, dead events losing data
+- Medium: empty entities missing identity, unused actors
+- Low: boundary conditions that should be documented
+`],
+  ['performance', `---
+name: Performance Reviewer
+perspective: Runtime efficiency, data access patterns, and resource usage
+---
+
+Review the specification and implementation for performance concerns.
+
+## Focus Areas
+- Identify N+1 query patterns in workflows that iterate over collections
+- Check that large collections define pagination (limit/offset or cursor)
+- Flag missing caching strategies for frequently-read entities
+- Ensure bulk operations exist where repeated single-item writes appear
+- Verify that async workflows are used for long-running operations
+- Check for redundant computation and unnecessary data fetching
+- Verify database indexes exist for frequently queried fields
+- Look for memory leaks — unbounded caches, growing event listeners
+
+## Severity Guide
+- Critical: unbounded queries on large tables, memory leaks
+- High: N+1 patterns, missing pagination on large collections
+- Medium: missing caching for hot paths, synchronous long-running operations
+- Low: minor optimization opportunities
+`],
+]);
+
 export function createProgram(): Command {
 
 const pkg = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf-8')) as { version: string };
@@ -213,19 +397,10 @@ program
     mkdirSync(join(prodaraDir, 'runs'), { recursive: true });
     mkdirSync(join(prodaraDir, 'reviewers'), { recursive: true });
 
-    // Scaffold sample custom reviewer
-    const sampleReviewer = join(prodaraDir, 'reviewers', 'performance.md');
-    writeFileSync(sampleReviewer, `# Performance Reviewer
-
-Review the specification and implementation for performance concerns.
-
-## Focus Areas
-- Identify N+1 query patterns in workflows that iterate over collections
-- Check that large collections define pagination (limit/offset or cursor)
-- Flag missing caching strategies for frequently-read entities
-- Ensure bulk operations exist where repeated single-item writes appear
-- Verify that async workflows are used for long-running operations
-`, 'utf-8');
+    // Scaffold all built-in reviewer skill files
+    for (const [name, content] of REVIEWER_TEMPLATES) {
+      writeFileSync(join(prodaraDir, 'reviewers', `${name}.md`), content, 'utf-8');
+    }
 
     if (opts.template) {
       const tmpl = getStarterTemplate(opts.template, opts.name);
@@ -269,13 +444,13 @@ module core {
       phases: {},
       reviewFix: { maxIterations: 3 },
       reviewers: {
-        architecture: { enabled: true },
-        security: { enabled: true },
-        codeQuality: { enabled: true },
-        testQuality: { enabled: true },
-        uxQuality: { enabled: true },
-        adversarial: { enabled: false },
-        edgeCase: { enabled: false },
+        architecture: { enabled: true, promptPath: '.prodara/reviewers/architecture.md' },
+        security: { enabled: true, promptPath: '.prodara/reviewers/security.md' },
+        codeQuality: { enabled: true, promptPath: '.prodara/reviewers/code-quality.md' },
+        testQuality: { enabled: true, promptPath: '.prodara/reviewers/test-quality.md' },
+        uxQuality: { enabled: true, promptPath: '.prodara/reviewers/ux-quality.md' },
+        adversarial: { enabled: false, promptPath: '.prodara/reviewers/adversarial.md' },
+        edgeCase: { enabled: false, promptPath: '.prodara/reviewers/edge-case.md' },
         performance: { enabled: true, promptPath: '.prodara/reviewers/performance.md' },
       },
       validation: { lint: null, typecheck: null, test: null, build: null },
@@ -379,11 +554,13 @@ program
       }
     }
 
-    // Scaffold sample reviewer if missing
-    const sampleReviewer = join(prodaraDir, 'reviewers', 'performance.md');
-    if (!existsSync(sampleReviewer)) {
-      writeFileSync(sampleReviewer, `# Performance Reviewer\n\nReview the specification and implementation for performance concerns.\n\n## Focus Areas\n- Identify N+1 query patterns in workflows that iterate over collections\n- Check that large collections define pagination (limit/offset or cursor)\n- Flag missing caching strategies for frequently-read entities\n- Ensure bulk operations exist where repeated single-item writes appear\n- Verify that async workflows are used for long-running operations\n`, 'utf-8');
-      changes.push('Created .prodara/reviewers/performance.md');
+    // Scaffold missing reviewer skill files (never overwrite user-customized ones)
+    for (const [name, content] of REVIEWER_TEMPLATES) {
+      const reviewerPath = join(prodaraDir, 'reviewers', `${name}.md`);
+      if (!existsSync(reviewerPath)) {
+        writeFileSync(reviewerPath, content, 'utf-8');
+        changes.push(`Created .prodara/reviewers/${name}.md`);
+      }
     }
 
     // Merge config additively — only add new keys, never overwrite user values
@@ -394,13 +571,13 @@ program
           phases: {},
           reviewFix: { maxIterations: 3 },
           reviewers: {
-            architecture: { enabled: true },
-            security: { enabled: true },
-            codeQuality: { enabled: true },
-            testQuality: { enabled: true },
-            uxQuality: { enabled: true },
-            adversarial: { enabled: false },
-            edgeCase: { enabled: false },
+            architecture: { enabled: true, promptPath: '.prodara/reviewers/architecture.md' },
+            security: { enabled: true, promptPath: '.prodara/reviewers/security.md' },
+            codeQuality: { enabled: true, promptPath: '.prodara/reviewers/code-quality.md' },
+            testQuality: { enabled: true, promptPath: '.prodara/reviewers/test-quality.md' },
+            uxQuality: { enabled: true, promptPath: '.prodara/reviewers/ux-quality.md' },
+            adversarial: { enabled: false, promptPath: '.prodara/reviewers/adversarial.md' },
+            edgeCase: { enabled: false, promptPath: '.prodara/reviewers/edge-case.md' },
             performance: { enabled: true, promptPath: '.prodara/reviewers/performance.md' },
           },
           validation: { lint: null, typecheck: null, test: null, build: null },
@@ -436,13 +613,13 @@ program
         phases: {},
         reviewFix: { maxIterations: 3 },
         reviewers: {
-          architecture: { enabled: true },
-          security: { enabled: true },
-          codeQuality: { enabled: true },
-          testQuality: { enabled: true },
-          uxQuality: { enabled: true },
-          adversarial: { enabled: false },
-          edgeCase: { enabled: false },
+          architecture: { enabled: true, promptPath: '.prodara/reviewers/architecture.md' },
+          security: { enabled: true, promptPath: '.prodara/reviewers/security.md' },
+          codeQuality: { enabled: true, promptPath: '.prodara/reviewers/code-quality.md' },
+          testQuality: { enabled: true, promptPath: '.prodara/reviewers/test-quality.md' },
+          uxQuality: { enabled: true, promptPath: '.prodara/reviewers/ux-quality.md' },
+          adversarial: { enabled: false, promptPath: '.prodara/reviewers/adversarial.md' },
+          edgeCase: { enabled: false, promptPath: '.prodara/reviewers/edge-case.md' },
           performance: { enabled: true, promptPath: '.prodara/reviewers/performance.md' },
         },
         validation: { lint: null, typecheck: null, test: null, build: null },
