@@ -24,7 +24,7 @@ import { detectDrift, formatDriftHuman } from '../drift/drift.js';
 import { getStarterTemplate, listStarterTemplates } from './starters.js';
 import { explainNode, collectAllNodeIds, formatExplanation, getDiagnosticInfo } from './explain.js';
 import { registerShutdownHandlers, setActiveRoot, clearActiveRoot } from './lifecycle.js';
-import { generateSlashCommands, writeSlashCommands, isValidAgentId, listSupportedAgents, getAgentConfig } from './agent-setup.js';
+import { generateSlashCommands, writeSlashCommands, isValidAgentId, listSupportedAgents, getAgentConfig, detectAgent } from './agent-setup.js';
 import type { AgentId } from './agent-setup.js';
 import { banner, success, error as uiError, warn as uiWarn, info as uiInfo, phaseIcon, box, table, dim, bold, isInteractive, createSpinner } from './ui.js';
 import { createProposal, listProposals, applyProposal, archiveProposal, getProposal } from '../proposal/proposal.js';
@@ -466,7 +466,8 @@ program
       }
     }
 
-    // Regenerate slash commands
+    // Regenerate slash commands — use explicit --ai or auto-detect
+    let resolvedAgent: AgentId | null = null;
     if (opts.ai) {
       if (!isValidAgentId(opts.ai)) {
         const supported = listSupportedAgents().join(', ');
@@ -475,13 +476,17 @@ program
         process.exitCode = 1;
         return;
       }
-      const agentId = opts.ai as AgentId;
-      if (agentId === 'generic' && !opts.aiCommandsDir) {
+      resolvedAgent = opts.ai as AgentId;
+      if (resolvedAgent === 'generic' && !opts.aiCommandsDir) {
         process.stderr.write(uiError('--ai generic requires --ai-commands-dir <dir>') + '\n');
         process.exitCode = 1;
         return;
       }
+    } else {
+      resolvedAgent = detectAgent(root);
+    }
 
+    if (resolvedAgent) {
       const appPrd = join(root, 'app.prd');
       let name = 'my_app';
       /* v8 ignore next 5 -- name extraction from existing .prd */
@@ -491,9 +496,9 @@ program
         if (match && match[1]) name = match[1];
       }
 
-      const commands = generateSlashCommands(agentId, root, name, opts.aiCommandsDir);
+      const commands = generateSlashCommands(resolvedAgent, root, name, opts.aiCommandsDir);
       writeSlashCommands(commands);
-      changes.push(`Regenerated slash commands for ${agentId}`);
+      changes.push(`Regenerated slash commands for ${resolvedAgent}`);
     }
 
     // Output

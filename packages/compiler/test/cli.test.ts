@@ -67,6 +67,7 @@ const mockListSupportedAgents = vi.fn();
 const mockGenerateSlashCommands = vi.fn();
 const mockWriteSlashCommands = vi.fn();
 const mockGetAgentConfig = vi.fn();
+const mockDetectAgent = vi.fn();
 const mockExecSync = vi.fn();
 const mockSelect = vi.fn();
 
@@ -123,6 +124,7 @@ vi.mock('../src/cli/agent-setup.js', () => ({
   generateSlashCommands: (...args: unknown[]) => mockGenerateSlashCommands(...args),
   writeSlashCommands: (...args: unknown[]) => mockWriteSlashCommands(...args),
   getAgentConfig: (...args: unknown[]) => mockGetAgentConfig(...args),
+  detectAgent: (...args: unknown[]) => mockDetectAgent(...args),
 }));
 
 vi.mock('../src/cli/git.js', () => ({
@@ -892,6 +894,43 @@ describe('upgrade command', () => {
       expect(mockGenerateSlashCommands).toHaveBeenCalledWith('copilot', expect.any(String), 'my_app', undefined);
       expect(mockWriteSlashCommands).toHaveBeenCalled();
       expect(stdoutOutput).toContain('Regenerated slash commands');
+      expect(process.exitCode).toBe(0);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('auto-detects agent and regenerates slash commands', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      mockDetectAgent.mockReturnValue('claude');
+      mockGenerateSlashCommands.mockReturnValue([]);
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir, '--skip-install']);
+      expect(mockDetectAgent).toHaveBeenCalledWith(expect.any(String));
+      expect(mockGenerateSlashCommands).toHaveBeenCalledWith('claude', expect.any(String), 'my_app', undefined);
+      expect(mockWriteSlashCommands).toHaveBeenCalled();
+      expect(stdoutOutput).toContain('Regenerated slash commands for claude');
+      expect(process.exitCode).toBe(0);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('skips slash command regeneration when no agent detected', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      mockDetectAgent.mockReturnValue(null);
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir, '--skip-install']);
+      expect(mockGenerateSlashCommands).not.toHaveBeenCalled();
+      expect(mockWriteSlashCommands).not.toHaveBeenCalled();
       expect(process.exitCode).toBe(0);
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });

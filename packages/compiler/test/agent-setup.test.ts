@@ -9,6 +9,7 @@ import {
   isValidAgentId,
   listSupportedAgents,
   getAgentConfig,
+  detectAgent,
   SLASH_COMMAND_COUNT,
 } from '../src/cli/agent-setup.js';
 import type { AgentId } from '../src/cli/agent-setup.js';
@@ -260,6 +261,34 @@ describe('Agent Setup', () => {
       const commands = generateSlashCommands('copilot', root, 'my_app');
       writeSlashCommands(commands);
       expect(existsSync(join(root, '.github', 'prompts'))).toBe(true);
+    });
+  });
+
+  describe('detectAgent', () => {
+    it('detects copilot from .github/prompts/prodara.prompt.md', () => {
+      const root = makeTempDir();
+      const commands = generateSlashCommands('copilot', root, 'my_app');
+      writeSlashCommands(commands);
+      expect(detectAgent(root)).toBe('copilot');
+    });
+
+    it('detects claude from .claude/commands/prodara.md', () => {
+      const root = makeTempDir();
+      const commands = generateSlashCommands('claude', root, 'my_app');
+      writeSlashCommands(commands);
+      expect(detectAgent(root)).toBe('claude');
+    });
+
+    it('detects cursor from .cursor/rules/prodara.mdc', () => {
+      const root = makeTempDir();
+      const commands = generateSlashCommands('cursor', root, 'my_app');
+      writeSlashCommands(commands);
+      expect(detectAgent(root)).toBe('cursor');
+    });
+
+    it('returns null when no agent commands exist', () => {
+      const root = makeTempDir();
+      expect(detectAgent(root)).toBeNull();
     });
   });
 });

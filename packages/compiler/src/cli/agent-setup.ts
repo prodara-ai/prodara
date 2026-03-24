@@ -7,7 +7,7 @@
 // Continue, Zed, Bolt, Aide, Trae, Augment, Sourcegraph, Tabnine,
 // Supermaven, Void, PearAI, Double, and a generic fallback.
 
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 
 // ---------------------------------------------------------------------------
@@ -823,6 +823,20 @@ export function listSupportedAgents(): readonly AgentId[] {
 
 export function isValidAgentId(value: string): value is AgentId {
   return value in AGENT_CONFIGS;
+}
+
+/**
+ * Detect which AI agent was used during init by checking for the
+ * presence of the main `prodara` command file in each agent's
+ * commands directory. Returns the first match, or null if none found.
+ */
+export function detectAgent(root: string): AgentId | null {
+  for (const [id, config] of Object.entries(AGENT_CONFIGS) as [AgentId, AgentCommandConfig][]) {
+    if (id === 'generic') continue;
+    const mainFile = join(root, config.commandsDir, `prodara${config.commandExtension}`);
+    if (existsSync(mainFile)) return id;
+  }
+  return null;
 }
 
 /**
