@@ -256,6 +256,36 @@ export function main(): void {
       return;
     }
 
+    // Special-case: `prodara upgrade` also needs to work without a current
+    // local install (e.g. node_modules deleted but .prodara/ exists).
+    if (args[0] === 'upgrade') {
+      const installed = bootstrapInit(cwd, wrapperVersion);
+      if (!installed) return;
+
+      const freshLocal = resolveLocal(cwd);
+      if (freshLocal && existsSync(freshLocal.cliEntry)) {
+        const upgradeArgs = args.includes('--skip-install') ? args : [...args, '--skip-install'];
+        try {
+          execFileSync(process.execPath, [freshLocal.cliEntry, ...upgradeArgs], {
+            cwd,
+            stdio: 'inherit',
+            env: process.env,
+          });
+        } catch (err: unknown) {
+          if (err && typeof err === 'object' && 'status' in err) {
+            process.exitCode = (err as { status: number }).status;
+          } else {
+            process.exitCode = 1;
+          }
+        }
+        return;
+      }
+
+      process.stderr.write(pc.red('Error: Compiler installed but could not resolve its CLI entry.\n'));
+      process.exitCode = 1;
+      return;
+    }
+
     process.stderr.write(
       'Error: Could not find a local installation of @prodara/compiler.\n' +
       '\n' +
@@ -273,6 +303,48 @@ export function main(): void {
   if (!compat.compatible) {
     process.stderr.write(`Warning: ${compat.message}\n\n`);
     // Still attempt delegation — only hard-fail on truly broken resolution
+  }
+
+  // Special-case: `prodara upgrade` updates the compiler BEFORE delegating
+  // so that the delegation target always has the upgrade command available.
+  if (args[0] === 'upgrade' && !args.includes('--skip-install')) {
+    process.stderr.write(pc.cyan('ℹ') + ' Updating @prodara/compiler...\n');
+    try {
+      execSync('npm install --save-dev @prodara/compiler@latest', { cwd, stdio: 'pipe' });
+      process.stderr.write(pc.green('✓') + ' Updated @prodara/compiler\n');
+    } catch {
+      process.stderr.write(pc.red('✗') + ' Failed to update @prodara/compiler.\n');
+      process.stderr.write(
+        '  Install it manually:\n' +
+        '    ' + pc.cyan('npm install --save-dev @prodara/compiler@latest') + '\n',
+      );
+      process.exitCode = 1;
+      return;
+    }
+
+    // Re-resolve after update and delegate with --skip-install
+    const freshLocal = resolveLocal(cwd);
+    if (freshLocal && existsSync(freshLocal.cliEntry)) {
+      const upgradeArgs = [...args, '--skip-install'];
+      try {
+        execFileSync(process.execPath, [freshLocal.cliEntry, ...upgradeArgs], {
+          cwd,
+          stdio: 'inherit',
+          env: process.env,
+        });
+      } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'status' in err) {
+          process.exitCode = (err as { status: number }).status;
+        } else {
+          process.exitCode = 1;
+        }
+      }
+      return;
+    }
+
+    process.stderr.write(pc.red('Error: Compiler updated but could not resolve its CLI entry.\n'));
+    process.exitCode = 1;
+    return;
   }
 
   // Check that the local CLI entry exists (package may not be built)

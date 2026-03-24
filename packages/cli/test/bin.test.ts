@@ -374,6 +374,283 @@ describe('bin', () => {
   });
 
   // -----------------------------------------------------------------------
+  // upgrade bootstrap (no local compiler)
+  // -----------------------------------------------------------------------
+
+  it('upgrade bootstraps when no local compiler exists', () => {
+    process.argv = ['node', 'prodara', 'upgrade', '.'];
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.2.0',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    mockResolveLocal.mockReturnValueOnce(null).mockReturnValueOnce(fakeLocal).mockReturnValue(fakeLocal);
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p.endsWith('dist/cli/main.js')) return true;
+      return realFs.existsSync(p);
+    });
+    main();
+    expect(mockExecSync).toHaveBeenCalledWith('npm install --save-dev @prodara/compiler', expect.objectContaining({ cwd: expect.any(String) }));
+    expect(mockExecFileSync).toHaveBeenCalledWith(
+      process.execPath,
+      expect.arrayContaining(['upgrade', '.', '--skip-install']),
+      expect.objectContaining({ stdio: 'inherit' }),
+    );
+  });
+
+  it('upgrade bootstrap fails when install fails', () => {
+    process.argv = ['node', 'prodara', 'upgrade', '.'];
+    mockResolveLocal.mockReturnValue(null);
+    mockExecSync.mockImplementation((cmd: string) => {
+      if (cmd.includes('npm install')) throw new Error('install failed');
+    });
+    main();
+    expect(stderrOutput).toContain('Failed to install @prodara/compiler');
+    expect(process.exitCode).toBe(1);
+    expect(mockExecFileSync).not.toHaveBeenCalled();
+  });
+
+  it('upgrade bootstrap fails when compiler cannot be resolved after install', () => {
+    process.argv = ['node', 'prodara', 'upgrade', '.'];
+    mockResolveLocal.mockReturnValue(null);
+    main();
+    expect(stderrOutput).toContain('could not resolve');
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('upgrade bootstrap propagates exit code from delegation', () => {
+    process.argv = ['node', 'prodara', 'upgrade', '.'];
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.2.0',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    mockResolveLocal.mockReturnValueOnce(null).mockReturnValueOnce(fakeLocal).mockReturnValue(fakeLocal);
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p.endsWith('dist/cli/main.js')) return true;
+      return realFs.existsSync(p);
+    });
+    mockExecFileSync.mockImplementation(() => {
+      const err = new Error('upgrade failed') as Error & { status: number };
+      err.status = 3;
+      throw err;
+    });
+    main();
+    expect(process.exitCode).toBe(3);
+  });
+
+  it('upgrade bootstrap sets exit code 1 for generic error', () => {
+    process.argv = ['node', 'prodara', 'upgrade', '.'];
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.2.0',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    mockResolveLocal.mockReturnValueOnce(null).mockReturnValueOnce(fakeLocal).mockReturnValue(fakeLocal);
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p.endsWith('dist/cli/main.js')) return true;
+      return realFs.existsSync(p);
+    });
+    mockExecFileSync.mockImplementation(() => { throw 'string error'; });
+    main();
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('upgrade bootstrap does not duplicate --skip-install', () => {
+    process.argv = ['node', 'prodara', 'upgrade', '.', '--skip-install'];
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.2.0',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    mockResolveLocal.mockReturnValueOnce(null).mockReturnValueOnce(fakeLocal).mockReturnValue(fakeLocal);
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p.endsWith('dist/cli/main.js')) return true;
+      return realFs.existsSync(p);
+    });
+    main();
+    const callArgs = mockExecFileSync.mock.calls[0][1] as string[];
+    const skipCount = callArgs.filter((a: string) => a === '--skip-install').length;
+    expect(skipCount).toBe(1);
+  });
+
+  it('upgrade bootstrap fails when entry missing after install', () => {
+    process.argv = ['node', 'prodara', 'upgrade', '.'];
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.2.0',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    mockResolveLocal.mockReturnValueOnce(null).mockReturnValueOnce(fakeLocal).mockReturnValue(fakeLocal);
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p.endsWith('dist/cli/main.js')) return false;
+      return realFs.existsSync(p);
+    });
+    main();
+    expect(stderrOutput).toContain('could not resolve');
+    expect(process.exitCode).toBe(1);
+  });
+
+  // -----------------------------------------------------------------------
+  // upgrade with existing local compiler (pre-update + delegate)
+  // -----------------------------------------------------------------------
+
+  it('upgrade updates compiler before delegating when local exists', () => {
+    process.argv = ['node', 'prodara', 'upgrade', '.'];
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.1.6',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    const updatedLocal = {
+      packageDir: '/fake',
+      version: '0.2.0',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    mockResolveLocal.mockReturnValueOnce(fakeLocal).mockReturnValue(updatedLocal);
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p.endsWith('dist/cli/main.js')) return true;
+      return realFs.existsSync(p);
+    });
+    main();
+    // Should update compiler via npm first
+    expect(mockExecSync).toHaveBeenCalledWith(
+      'npm install --save-dev @prodara/compiler@latest',
+      expect.objectContaining({ cwd: expect.any(String), stdio: 'pipe' }),
+    );
+    expect(stderrOutput).toContain('Updating @prodara/compiler');
+    expect(stderrOutput).toContain('Updated @prodara/compiler');
+    // Should delegate with --skip-install
+    expect(mockExecFileSync).toHaveBeenCalledWith(
+      process.execPath,
+      expect.arrayContaining(['upgrade', '.', '--skip-install']),
+      expect.objectContaining({ stdio: 'inherit' }),
+    );
+  });
+
+  it('upgrade skips npm update when --skip-install is passed', () => {
+    process.argv = ['node', 'prodara', 'upgrade', '.', '--skip-install'];
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.1.6',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    mockResolveLocal.mockReturnValue(fakeLocal);
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p.endsWith('dist/cli/main.js')) return true;
+      return realFs.existsSync(p);
+    });
+    main();
+    // Should NOT call npm install
+    expect(mockExecSync).not.toHaveBeenCalledWith(
+      'npm install --save-dev @prodara/compiler@latest',
+      expect.anything(),
+    );
+    // Should delegate directly (normal delegation path includes cliEntry)
+    expect(mockExecFileSync).toHaveBeenCalledWith(
+      process.execPath,
+      ['/fake/dist/cli/main.js', 'upgrade', '.', '--skip-install'],
+      expect.objectContaining({ stdio: 'inherit' }),
+    );
+  });
+
+  it('upgrade fails when npm update fails', () => {
+    process.argv = ['node', 'prodara', 'upgrade', '.'];
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.1.6',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    mockResolveLocal.mockReturnValue(fakeLocal);
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p.endsWith('dist/cli/main.js')) return true;
+      return realFs.existsSync(p);
+    });
+    mockExecSync.mockImplementation(() => { throw new Error('npm failed'); });
+    main();
+    expect(stderrOutput).toContain('Failed to update @prodara/compiler');
+    expect(process.exitCode).toBe(1);
+    expect(mockExecFileSync).not.toHaveBeenCalled();
+  });
+
+  it('upgrade propagates exit code from delegation after update', () => {
+    process.argv = ['node', 'prodara', 'upgrade', '.'];
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.1.6',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    mockResolveLocal.mockReturnValueOnce(fakeLocal).mockReturnValue(fakeLocal);
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p.endsWith('dist/cli/main.js')) return true;
+      return realFs.existsSync(p);
+    });
+    mockExecFileSync.mockImplementation(() => {
+      const err = new Error('failed') as Error & { status: number };
+      err.status = 4;
+      throw err;
+    });
+    main();
+    expect(process.exitCode).toBe(4);
+  });
+
+  it('upgrade sets exit code 1 for generic delegation error after update', () => {
+    process.argv = ['node', 'prodara', 'upgrade', '.'];
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.1.6',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    mockResolveLocal.mockReturnValueOnce(fakeLocal).mockReturnValue(fakeLocal);
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p.endsWith('dist/cli/main.js')) return true;
+      return realFs.existsSync(p);
+    });
+    mockExecFileSync.mockImplementation(() => { throw 'string error'; });
+    main();
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('upgrade fails when entry missing after npm update', () => {
+    process.argv = ['node', 'prodara', 'upgrade', '.'];
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.1.6',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    const updatedLocal = {
+      packageDir: '/fake',
+      version: '0.2.0',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    mockResolveLocal.mockReturnValueOnce(fakeLocal).mockReturnValue(updatedLocal);
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p.endsWith('dist/cli/main.js')) return false;
+      return realFs.existsSync(p);
+    });
+    main();
+    expect(stderrOutput).toContain('could not resolve');
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('upgrade fails when resolve returns null after npm update', () => {
+    process.argv = ['node', 'prodara', 'upgrade', '.'];
+    const fakeLocal = {
+      packageDir: '/fake',
+      version: '0.1.6',
+      cliEntry: '/fake/dist/cli/main.js',
+    };
+    mockResolveLocal.mockReturnValueOnce(fakeLocal).mockReturnValue(null);
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p.endsWith('dist/cli/main.js')) return true;
+      return realFs.existsSync(p);
+    });
+    main();
+    expect(stderrOutput).toContain('could not resolve');
+    expect(process.exitCode).toBe(1);
+  });
+
+  // -----------------------------------------------------------------------
   // bootstrapInit direct tests
   // -----------------------------------------------------------------------
 
