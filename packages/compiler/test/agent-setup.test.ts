@@ -243,9 +243,16 @@ describe('Agent Setup', () => {
 
     it('includes CLI reference', () => {
       const content = buildPromptContent('my_app');
-      expect(content).toContain('prodara build');
-      expect(content).toContain('prodara validate');
-      expect(content).toContain('prodara test');
+      expect(content).toContain('npx prodara build');
+      expect(content).toContain('npx prodara validate');
+      expect(content).toContain('npx prodara test');
+    });
+
+    it('includes tool usage section with mandatory terminal instructions', () => {
+      const content = buildPromptContent('my_app');
+      expect(content).toContain('Tool Usage');
+      expect(content).toContain('MUST be executed in a terminal');
+      expect(content).toContain('Product Graph JSON');
     });
 
     it('includes configuration reference', () => {

@@ -11,6 +11,16 @@ When a user runs `/Prodara <description>`, you own the **entire** lifecycle — 
 
 ---
 
+# Tool Usage — CRITICAL
+
+Prodara has a real compiler. You MUST execute its CLI commands in the terminal — they are not optional or decorative.
+
+- **All `npx prodara` commands MUST be executed in a terminal.** They are real CLI tools that parse, type-check, and compile `.prd` files.
+- Never skip `npx prodara validate` or `npx prodara build`. The compiler produces the Product Graph JSON and implementation plan — without them, subsequent phases have no data to work with.
+- If a command fails, read the error output, fix the issue, and re-run.
+
+---
+
 # Core Contract
 
 You MUST pause ONLY for:
@@ -21,6 +31,7 @@ After clarification is resolved, you MUST NOT pause again until all phases are c
 You MUST NOT:
 - Ask the user to read generated files
 - Ask for confirmation between phases
+- Skip running `npx prodara validate` or `npx prodara build` — the compiler is mandatory
 - Modify production code during spec validation loops (Phase 3)
 - Add scope beyond the approved specification
 - Improve, refactor, or extend features beyond what the spec requires
@@ -33,6 +44,7 @@ You MUST NOT:
 You MUST:
 - Keep output concise and high-signal — no explanatory commentary during automated phases
 - Complete every phase before reporting back
+- Run `npx prodara validate` in Phase 3 and `npx prodara build` in Phase 4 — in the terminal, not just mentioned
 - Modify SPEC ARTIFACTS ONLY during spec validation loops (Phase 3)
 
 ---
@@ -167,10 +179,15 @@ every workflow needs its steps, every surface needs its sections.
 
 # Phase 3 — Spec Quality Gates (Spec Artifacts Only)
 
-## Validate
+## Validate — MANDATORY TERMINAL COMMAND
 
-Run `prodara validate` to parse and type-check all `.prd` files.
-Fix **every** error. Re-validate until clean.
+Execute in terminal:
+```bash
+npx prodara validate
+```
+
+This runs the real Prodara compiler to parse and type-check all `.prd` files. You MUST actually run this command and read its output.
+Fix **every** error reported by the compiler. Re-run `npx prodara validate` until the output shows zero errors.
 
 ## Multi-Perspective Spec Review
 
@@ -181,27 +198,32 @@ After validation passes, review the spec from four perspectives:
 3. **Performance** — Are data access patterns efficient? Are caching/pagination needs covered?
 4. **UX** (skip for backend-only / CLI-only specs) — Are error states, loading states, and edge cases covered?
 
-Fix SPEC ARTIFACTS ONLY (do NOT modify or create production/source code). Then re-validate.
+Fix SPEC ARTIFACTS ONLY (do NOT modify or create production/source code). Then re-run `npx prodara validate`.
 
-Repeat until `prodara validate` is clean AND no multi-perspective issues remain.
+Repeat until `npx prodara validate` is clean AND no multi-perspective issues remain.
 
 Iteration cap: 6. If no progress across 2 iterations, escalate via BLOCKED format.
 
-You MUST NOT proceed to the next phase until validation is clean.
+You MUST NOT proceed to the next phase until `npx prodara validate` exits with zero errors.
 
 ---
 
-# Phase 4 — Build
+# Phase 4 — Build — MANDATORY TERMINAL COMMAND
 
+Execute in terminal:
 ```bash
-prodara build
+npx prodara build
 ```
 
-This compiles the specs, generates the product graph, creates an
+This compiles the specs, generates the Product Graph JSON, creates an
 implementation plan, runs reviews, and verifies integrity.
 
+You MUST actually run this command. It produces output files in `.prodara/runs/` including the product graph and implementation plan.
 Read the build output and implementation plan from `.prodara/runs/`.
 Implementation tasks must be executed sequentially in the order given.
+
+If this command fails, fix the reported issues and re-run until it succeeds.
+You MUST NOT proceed to Phase 5 without a successful `npx prodara build`.
 
 ---
 
@@ -251,8 +273,8 @@ Run in order: lint → typecheck → tests → build.
 Success = command executed + exit code 0.
 
 Also run:
-- `prodara test` to verify spec-level assertions
-- `prodara build` to re-confirm the build is clean
+- `npx prodara test` to verify spec-level assertions
+- `npx prodara build` to re-confirm the build is clean
 
 Fix any failures (up to 3 retries per failure), then proceed.
 
@@ -293,7 +315,7 @@ If still Critical/High after 6 loops, escalate using BLOCKED format listing rema
 ## Final Safety Gate (Mandatory)
 
 After the last review loop:
-- Run the full validation suite one final time (lint/typecheck/tests/build + `prodara build`).
+- Run the full validation suite one final time (lint/typecheck/tests/build + `npx prodara build`).
 - If any validation fails, fix and re-run until green (or escalate via BLOCKED).
 - You MUST NOT proceed to Phase 8 unless validation is green.
 
@@ -358,11 +380,13 @@ If blocked, print BLOCKED format instead.
 
 # CLI Reference
 
+These are real shell commands — execute them in the terminal:
+
 ```bash
-prodara build              # Full pipeline: compile → workflow → review → verify
-prodara build --dry-run    # Preview tasks without executing
-prodara validate           # Parse and type-check .prd files
-prodara test               # Run spec-level tests
+npx prodara build              # Full pipeline: compile → workflow → review → verify
+npx prodara build --dry-run    # Preview tasks without executing
+npx prodara validate           # Parse and type-check .prd files
+npx prodara test               # Run spec-level tests
 ```
 
 ---
