@@ -16,6 +16,7 @@ function makeBind(): BindResult {
     modules: new Map(),
     allSymbols: new Map(),
     productName: undefined,
+    declaredModules: undefined,
   };
 }
 

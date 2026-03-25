@@ -235,5 +235,23 @@ describe('Binder', () => {
       const result = bindSource(`module core { entity task { id: uuid } }`);
       expect(result.productName).toBeUndefined();
     });
+
+    it('reports error when product references missing module', () => {
+      const result = bindSource(`
+        product my_app { title: "App" version: "1.0" modules: [core, missing_mod] }
+        module core { entity task { id: uuid } }
+      `);
+      expect(result.bag.hasErrors).toBe(true);
+      expect(result.bag.errors.some((d) => d.code === 'PRD0204')).toBe(true);
+    });
+
+    it('warns when module exists but is not declared in product modules', () => {
+      const result = bindSource(`
+        product my_app { title: "App" version: "1.0" modules: [core] }
+        module core { entity task { id: uuid } }
+        module extra { entity widget { id: uuid } }
+      `);
+      expect(result.bag.all.some((d) => d.code === 'PRD0205')).toBe(true);
+    });
   });
 });
