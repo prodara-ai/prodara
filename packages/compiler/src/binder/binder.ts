@@ -46,6 +46,7 @@ export interface BindResult {
   readonly modules: ReadonlyMap<string, ModuleSymbolTable>;
   readonly allSymbols: ReadonlyMap<string, Symbol>;  // qualifiedName -> Symbol
   readonly productName: string | undefined;
+  readonly declaredModules: readonly string[] | undefined;
   readonly bag: DiagnosticBag;
 }
 
@@ -99,6 +100,8 @@ export function bind(files: readonly AstFile[]): BindResult {
   // 1. Merge open modules — group module items by name across all files
   const mergedModules = new Map<string, { items: ModuleItem[]; files: Set<string> }>();
   let productName: string | undefined;
+  let declaredModules: readonly string[] | undefined;
+  let productLocation: { file: string; line: number; column: number } | undefined;
 
   for (const file of files) {
     for (const decl of file.declarations) {
@@ -111,6 +114,8 @@ export function bind(files: readonly AstFile[]): BindResult {
           });
         }
         productName = decl.name;
+        declaredModules = decl.modules;
+        productLocation = { file: file.path, line: decl.location.line, column: decl.location.column };
         continue;
       }
       if (decl.kind === 'module') {
@@ -219,7 +224,32 @@ export function bind(files: readonly AstFile[]): BindResult {
     moduleTables.set(modName, { name: modName, symbols, imports: resolvedImports });
   }
 
-  return { modules: moduleTables, allSymbols, productName, bag };
+  // 4. Validate declared modules vs. found modules
+  if (declaredModules && productLocation) {
+    for (const declMod of declaredModules) {
+      if (!moduleTables.has(declMod)) {
+        bag.add({
+          phase: 'binder', category: 'resolution_error', severity: 'error',
+          code: 'PRD0204',
+          message: `Product references module '${declMod}' but no module '${declMod}' was found`,
+          file: productLocation.file, line: productLocation.line, column: productLocation.column,
+        });
+      }
+    }
+    const declaredSet = new Set(declaredModules);
+    for (const modName of moduleTables.keys()) {
+      if (!declaredSet.has(modName)) {
+        bag.add({
+          phase: 'binder', category: 'semantic_error', severity: 'warning',
+          code: 'PRD0205',
+          message: `Module '${modName}' exists but is not listed in the product's modules`,
+          file: productLocation.file, line: productLocation.line, column: productLocation.column,
+        });
+      }
+    }
+  }
+
+  return { modules: moduleTables, allSymbols, productName, declaredModules, bag };
 }
 
 // ---------------------------------------------------------------------------

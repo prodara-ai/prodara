@@ -427,23 +427,290 @@ If blocked, print BLOCKED format instead.
 
 ---
 
-# .prd Language Quick Reference
+# .prd Language Reference
 
-- `product <name> { title, version, modules }` — Top-level product definition
-- `module <name> { ... }` — Logical grouping of entities, workflows, surfaces
-- `entity <name> { field: type }` — Data model with typed fields
-- `enum <name> { variant1, variant2 }` — Choice type
-- `value <name> { field: type }` — Immutable composite
-- `workflow <name> { steps }` — Business process definition
-- `action <name> { workflow: <ref> }` — Invokable action
-- `event <name> { fields }` — Domain event definition
-- `surface <name> { kind, binds }` — UI surface specification
-- `constitution <name> { policies }` — Architecture governance
-- `security <name> { applies_to, requires }` — Security policy
-- `privacy <name> { applies_to, classification, retention }` — Data privacy
-- `test <name> { target, expect }` — Spec-level assertion
-- Primitive types: `string`, `integer`, `decimal`, `boolean`, `uuid`, `datetime`, `currency`
-- Generic wrappers: `list<T>`, `optional<T>`, `map<K,V>`
+Prodara is a brace-delimited declarative language. Most constructs follow:
+
+    keyword name {
+      property: value
+      block_name { ... }
+    }
+
+Identifiers use `snake_case`. Comments use `//` (line) and `/* */` (block).
+
+## Types
+
+- Primitives: `string`, `integer`, `decimal`, `boolean`, `uuid`, `datetime`, `date`, `currency`
+- Generics: `list<T>`, `optional<T>`, `map<K,V>`
+- References: any declared entity, value, or enum name (e.g. `crm.customer`)
+
+## Product (one per workspace)
+
+    product my_app {
+      title: "My App"
+      version: "0.1.0"
+      modules: [auth, billing, crm]
+    }
+
+## Module (open — may span multiple files)
+
+    module billing {
+      import customer from crm          // cross-module reference
+      import admin from identity as admin_user  // with alias
+
+      // all constructs go inside a module
+    }
+
+## Entity (persistent domain object with identity)
+
+    entity invoice {
+      invoice_id: uuid
+      customer: crm.customer             // entity reference
+      total: money                        // value object reference
+      status: invoice_status = draft      // enum with default
+      notes: optional<string>             // optional field
+      tags: list<string>                  // list field
+      created_at: datetime
+    }
+
+## Enum (finite set of named values)
+
+    enum invoice_status {
+      draft { description: "Created but not sent" }
+      issued
+      paid
+      overdue
+      void
+    }
+
+## Value (immutable composite, no identity)
+
+    value money {
+      amount: decimal
+      currency: string
+    }
+
+## Actor
+
+    actor accountant {
+      title: "Accountant"
+      description: "Internal finance operator"
+    }
+
+## Capability
+
+    capability invoicing {
+      title: "Invoicing"
+      actors: [accountant, admin]
+    }
+
+## Workflow (business process)
+
+    workflow create_invoice {
+      capability: invoicing
+
+      authorization {
+        accountant: [invoice.create]       // entity.operation permission tokens
+        admin: [invoice.create, invoice.void]
+      }
+
+      input {
+        customer: crm.customer
+        due_date: date
+        notes: optional<string>
+      }
+
+      reads { crm.customer }
+      writes { invoice }
+
+      rules { invoice_total_positive }
+
+      steps {
+        call validate_customer
+        call build_invoice
+        decide customer_valid {
+          when yes -> call calculate_total
+          when no  -> fail invalid_customer
+        }
+        call persist_invoice
+      }
+
+      transitions {
+        invoice.status: draft -> issued    // state machine transition
+      }
+
+      effects {
+        audit "Invoice created"
+        notify notifications.send_email
+        emit invoice_created
+      }
+
+      returns {
+        ok: invoice
+        error: invoice_error
+      }
+    }
+
+Steps support: `call <ref>`, `decide <name> { when <value> -> ... }`, `fail <name>`.
+Workflows triggered by events/schedules use `on:` instead of being invoked by actions:
+
+    workflow reconcile_invoices {
+      on: nightly_reconciliation
+      reads { invoice }
+      returns { ok: boolean }
+    }
+
+## Action (bridge between surface and workflow)
+
+    action create_invoice {
+      title: "Create Invoice"
+      workflow: create_invoice
+    }
+
+## Event
+
+    event invoice_created {
+      payload: invoice
+      description: "Raised after successful invoice creation"
+    }
+
+## Schedule
+
+    schedule nightly_reconciliation {
+      cron: "0 2 * * *"
+      description: "Runs every night at 02:00"
+    }
+
+## Rule (declarative validation constraint)
+
+    rule invoice_total_positive {
+      entity: invoice
+      condition: total.amount > 0
+      message: billing.ui_strings.invoice_total_positive
+    }
+
+Condition operators: `>`, `<`, `>=`, `<=`, `==`, `!=`, `and`, `or`, `not`, parentheses.
+
+## Surface (UI view, form, dashboard, API)
+
+    surface invoice_list {
+      kind: view
+      title: billing.invoice_strings.invoice_list_title  // strings reference
+      binds: invoice
+      actions: [create_invoice, open_invoice]
+      hooks { load: load_invoices }
+      surfaces: [filter_bar, invoice_table]   // nested composition
+    }
+
+Form surfaces collect input:
+
+    surface create_invoice_form {
+      kind: form
+      binds: invoice
+      fields {
+        customer: crm.customer
+        due_date: date
+        notes: optional<string>
+      }
+      rules { invoice_total_positive }
+      actions: [submit_create_invoice]
+    }
+
+## Strings (localization)
+
+    strings invoice_strings {
+      invoice_list_title: "Invoices"
+      invoice_number_label: "Invoice #"
+      total_label: "Total"
+    }
+
+## Rendering (platform-specific visual layout)
+
+    rendering invoice_list_web {
+      target: invoice_list
+      platform: web
+    }
+
+## Design System
+
+    tokens base {
+      color: {
+        brand_primary: "#2E6BFF"
+        surface_background: "#FFFFFF"
+      }
+      spacing: { sm: 4, md: 8, lg: 16 }
+    }
+
+    theme dark {
+      extends: base
+      color: { surface_background: "#111827" }
+    }
+
+## Constitution (governance policies)
+
+    constitution default_product {
+      use: [registry/web/angular@1.2, registry/backend/nestjs@1.1]
+      policies {
+        stack { frontend: angular, backend: nestjs, database: postgres }
+        security { authentication: required, authorization: required }
+        testing { tests_required: true }
+      }
+    }
+
+## Security & Privacy
+
+    security billing_security {
+      applies_to: [invoice_list, void_invoice]
+      requires: [authentication, authorization, audit_logging]
+    }
+
+    privacy invoice_privacy {
+      applies_to: [invoice]
+      classification: business_sensitive
+      retention: "7 years"
+    }
+
+## Platform (optional refinements)
+
+    integration stripe {
+      title: "Stripe"
+      kind: external_service
+      protocol: http
+    }
+
+    storage invoice_storage {
+      target: invoice
+      model: relational
+      table: "invoices"
+      indexes: [[customer, status], unique [invoice_id]]
+    }
+
+    transport invoice_api_transport {
+      target: invoice_api
+      protocol: http
+      style: rest
+    }
+
+## Test (spec-level assertion)
+
+    test issue_invoice_transition {
+      target: issue_invoice
+      given { invoice.status: draft }
+      expect {
+        transition: "invoice.status: draft -> issued"
+        returns: ok
+      }
+    }
+
+    test only_admin_can_void {
+      target: void_invoice
+      expect {
+        authorization {
+          admin: allowed
+          accountant: denied
+        }
+      }
+    }
 
 ---
 
