@@ -13,7 +13,7 @@ import { CodeBlockComponent } from '../../components/code-block.component';
         <div class="mx-auto max-w-3xl text-center">
           <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-primary-200 bg-primary-50 px-4 py-1.5 text-xs font-medium text-primary-700 dark:border-primary-800 dark:bg-primary-900/30 dark:text-primary-300">
             <span class="h-1.5 w-1.5 rounded-full bg-primary-500 animate-pulse"></span>
-            v0.1 - First Public Release
+            v0.2.0
           </div>
           <h1 class="text-4xl font-extrabold tracking-tight text-surface-950 sm:text-5xl lg:text-6xl">
             Give Your AI a Compiler,<br />
