@@ -294,10 +294,14 @@ program
     const result = await runPipeline(root, config, pipelineOpts);
 
     if (opts.format === 'json') {
+      const artifacts = existsSync(join(root, '.prodara', 'product-graph.json'))
+        ? { productGraph: '.prodara/product-graph.json', plan: '.prodara/plan.json', build: '.prodara/build.json', sources: '.prodara/sources.json' }
+        : undefined;
       process.stdout.write(JSON.stringify({
         status: result.status,
         phases: result.phases.map((p) => ({ phase: p.phase, status: p.status, detail: p.detail, duration_ms: p.duration_ms })),
         duration_ms: result.duration_ms,
+        artifacts,
         implementResult: result.implementResult ?? undefined,
       }, null, 2) + '\n');
     } else {
@@ -309,6 +313,9 @@ program
       process.stdout.write(table(['Phase', 'Detail', 'Time'], phaseRows) + '\n\n');
       if (result.status === 'success') {
         process.stdout.write(box('Build Result', [success(`Build completed in ${result.duration_ms}ms`)]) + '\n');
+        if (existsSync(join(root, '.prodara', 'product-graph.json'))) {
+          process.stdout.write(success('Build artifacts written to .prodara/ (product-graph.json, plan.json, build.json, sources.json)') + '\n');
+        }
       } else {
         process.stdout.write(box('Build Result', [uiError(`Build failed (${result.duration_ms}ms)`)]) + '\n');
       }

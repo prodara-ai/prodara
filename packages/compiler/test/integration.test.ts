@@ -122,7 +122,7 @@ describe('Compile — integration', () => {
     expect(result.diagnostics.hasErrors).toBe(true);
   });
 
-  it('handles build state write failure gracefully', () => {
+  it('handles build state write failure gracefully with warning', () => {
     writeFileSync(join(tempDir, 'app.prd'), 'product P { version: "1.0" }');
     writeFileSync(join(tempDir, 'm.prd'), 'module m { entity E { x: string } }');
     // Create .prodara as a file instead of directory to cause write failure
@@ -130,6 +130,8 @@ describe('Compile — integration', () => {
     const result = compile(tempDir, { writeBuild: true });
     // Should still succeed despite write failure
     expect(result.diagnostics.hasErrors).toBe(false);
+    // Should emit PRD0510 warning about the write failure
+    expect(result.diagnostics.warnings.some((d) => d.code === 'PRD0510')).toBe(true);
  });
 });
 

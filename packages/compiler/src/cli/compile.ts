@@ -137,8 +137,20 @@ export function compile(root: string, options: CompileOptions = {}): CompileResu
   if (options.writeBuild !== false) {
     try {
       writeBuildState(root, graph, plan, filePaths as string[]);
-    } catch {
-      // Non-fatal: build state write failure shouldn't block compilation
+    } catch (err) {
+      /* v8 ignore next -- FS errors are always Error instances */
+      const detail = err instanceof Error ? err.message : String(err);
+      process.stderr.write(`Warning: Failed to write build state to .prodara/: ${detail}\n`);
+      bag.add({
+        phase: 'graph',
+        category: 'graph_error',
+        severity: 'warning',
+        code: 'PRD0510',
+        message: `Failed to write build state to .prodara/: ${detail}. Incremental builds will not work until this is resolved.`,
+        file: '',
+        line: 0,
+        column: 0,
+      });
     }
   }
 

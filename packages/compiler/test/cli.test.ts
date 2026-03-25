@@ -557,6 +557,44 @@ describe('build command', () => {
     await runCommand(program, ['build', '.', '--format', 'json']);
     expect(stderrOutput).not.toContain('[1/3]');
   });
+
+  it('includes artifacts in human output when .prodara/ files exist', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, writeFileSync: fsWrite, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-build-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      fsWrite(join(tmpDir, '.prodara', 'product-graph.json'), '{}', 'utf-8');
+      mockRunPipeline.mockReturnValue(makePipelineResult());
+      const program = createProgram();
+      await runCommand(program, ['build', tmpDir]);
+      expect(stdoutOutput).toContain('Build artifacts written to .prodara/');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('includes artifacts in JSON output when .prodara/ files exist', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, writeFileSync: fsWrite, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-build-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      fsWrite(join(tmpDir, '.prodara', 'product-graph.json'), '{}', 'utf-8');
+      mockRunPipeline.mockReturnValue(makePipelineResult());
+      const program = createProgram();
+      await runCommand(program, ['build', tmpDir, '--format', 'json']);
+      const parsed = JSON.parse(stdoutOutput);
+      expect(parsed.artifacts).toEqual({
+        productGraph: '.prodara/product-graph.json',
+        plan: '.prodara/plan.json',
+        build: '.prodara/build.json',
+        sources: '.prodara/sources.json',
+      });
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

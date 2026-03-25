@@ -416,6 +416,34 @@ Write (or update) the \`.prd\` specification files for the requested product "${
 **All \`.prd\` files MUST be placed in the \`spec/\` directory** (e.g., \`spec/app.prd\`, \`spec/auth.prd\`).
 Never place \`.prd\` files in the project root or under \`src/\`.
 
+## Multi-File Spec Organization
+
+Split the specification into **one file per module**. Do NOT put everything in a single \`app.prd\`.
+
+- \`spec/app.prd\` — Product declaration only (\`product\` block listing all modules)
+- \`spec/<module>.prd\` — One file per module (e.g., \`spec/auth.prd\`, \`spec/billing.prd\`, \`spec/tasks.prd\`)
+- For large products (10+ modules), group into subdirectories: \`spec/core/\`, \`spec/features/\`, \`spec/integrations/\`
+
+Use \`import\` to reference entities/actors across modules:
+\`\`\`
+import admin from identity
+import Customer from billing
+\`\`\`
+
+### Example Structure
+
+\`\`\`
+spec/
+  app.prd              # product my_app { modules: [identity, tasks, billing] }
+  identity.prd         # module identity { actor User, entity Account, ... }
+  tasks.prd            # module tasks { import User from identity; entity Task, ... }
+  billing.prd          # module billing { import User from identity; entity Invoice, ... }
+\`\`\`
+
+The compiler discovers all \`.prd\` files recursively — subdirectory nesting is allowed.
+
+## Spec Content
+
 Include **all** of the following blocks as appropriate:
 - \`product\` / \`module\` — project structure
 - \`constitution\` / \`security\` / \`privacy\` — governance rules
