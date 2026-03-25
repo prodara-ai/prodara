@@ -128,10 +128,10 @@ describe('Compile — integration', () => {
     // Create .prodara as a file instead of directory to cause write failure
     writeFileSync(join(tempDir, '.prodara'), 'not a directory');
     const result = compile(tempDir, { writeBuild: true });
-    // Should still succeed despite write failure
-    expect(result.diagnostics.hasErrors).toBe(false);
-    // Should emit PRD0510 warning about the write failure
-    expect(result.diagnostics.warnings.some((d) => d.code === 'PRD0510')).toBe(true);
+    // Should report error because build artifacts could not be written
+    expect(result.diagnostics.hasErrors).toBe(true);
+    // Should emit PRD0510 error about the write failure
+    expect(result.diagnostics.errors.some((d) => d.code === 'PRD0510')).toBe(true);
  });
 });
 

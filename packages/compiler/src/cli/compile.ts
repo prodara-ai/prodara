@@ -140,13 +140,13 @@ export function compile(root: string, options: CompileOptions = {}): CompileResu
     } catch (err) {
       /* v8 ignore next -- FS errors are always Error instances */
       const detail = err instanceof Error ? err.message : String(err);
-      process.stderr.write(`Warning: Failed to write build state to .prodara/: ${detail}\n`);
+      process.stderr.write(`Error: Failed to write build artifacts to .prodara/: ${detail}\n`);
       bag.add({
         phase: 'graph',
         category: 'graph_error',
-        severity: 'warning',
+        severity: 'error',
         code: 'PRD0510',
-        message: `Failed to write build state to .prodara/: ${detail}. Incremental builds will not work until this is resolved.`,
+        message: `Failed to write build artifacts to .prodara/: ${detail}`,
         file: '',
         line: 0,
         column: 0,

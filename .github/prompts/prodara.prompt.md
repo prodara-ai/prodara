@@ -44,7 +44,7 @@ You MUST NOT:
 You MUST:
 - Keep output concise and high-signal — no explanatory commentary during automated phases
 - Complete every phase before reporting back
-- Run `npx prodara validate` in Phase 3 and `npx prodara build` in Phase 4 — in the terminal, not just mentioned
+- Run `npx prodara validate` in Phase 3 and `npx prodara build --no-implement --no-review` in Phase 4 — in the terminal, not just mentioned
 - Modify SPEC ARTIFACTS ONLY during spec validation loops (Phase 3)
 
 ---
@@ -250,17 +250,21 @@ You MUST NOT proceed to the next phase until `npx prodara validate` exits with z
 
 Execute in terminal:
 ```bash
-npx prodara build
+npx prodara build --no-implement --no-review
 ```
 
 This compiles the specs, generates the Product Graph JSON, creates an
-implementation plan, runs reviews, and verifies integrity.
+implementation plan, and verifies integrity. The `--no-implement --no-review`
+flags skip agent-driven phases — you handle implementation and review yourself
+in Phases 6–7.
 
 You MUST actually run this command. It produces output files in `.prodara/` including:
 - `product-graph.json` — the complete Product Graph (typed representation of the entire product)
 - `plan.json` — the implementation plan with ordered tasks
 - `build.json` — build metadata and checksums
 - `sources.json` — discovered source file paths
+
+**After the build succeeds, verify that `.prodara/product-graph.json` exists.** If it does not, the build failed to write artifacts — check stderr for errors.
 
 ## Incremental Builds
 
@@ -274,7 +278,7 @@ Implementation tasks must be executed sequentially in the order given.
 **The `product-graph.json` file is committed to the repository** so incremental builds work across sessions.
 
 If this command fails, fix the reported issues and re-run until it succeeds.
-You MUST NOT proceed to Phase 5 without a successful `npx prodara build`.
+You MUST NOT proceed to Phase 5 without a successful `npx prodara build --no-implement --no-review`.
 
 ---
 
@@ -339,7 +343,7 @@ Success = command executed + exit code 0.
 
 Also run:
 - `npx prodara test` to verify spec-level assertions
-- `npx prodara build` to re-confirm the build is clean
+- `npx prodara build --no-implement --no-review` to re-confirm the build is clean
 
 Fix any failures (up to 3 retries per failure), then proceed.
 
@@ -380,7 +384,7 @@ If still Critical/High after 6 loops, escalate using BLOCKED format listing rema
 ## Final Safety Gate (Mandatory)
 
 After the last review loop:
-- Run the full validation suite one final time (lint/typecheck/tests/build + `npx prodara build`).
+- Run the full validation suite one final time (lint/typecheck/tests/build + `npx prodara build --no-implement --no-review`).
 - If any validation fails, fix and re-run until green (or escalate via BLOCKED).
 - You MUST NOT proceed to Phase 8 unless validation is green.
 
@@ -448,6 +452,7 @@ If blocked, print BLOCKED format instead.
 These are real shell commands — execute them in the terminal:
 
 ```bash
+npx prodara build --no-implement --no-review   # Compile + plan (recommended for AI agents)
 npx prodara build              # Full pipeline: compile → workflow → review → verify
 npx prodara build --dry-run    # Preview tasks without executing
 npx prodara validate           # Parse and type-check .prd files
