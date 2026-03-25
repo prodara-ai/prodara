@@ -1,6 +1,6 @@
 {
   "name": "@prodara/templates",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Prompt templates for Prodara pipeline phases, reviewers, and platform adapters",
   "author": "Prodara Contributors",
   "repository": {
