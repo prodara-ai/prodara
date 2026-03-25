@@ -145,7 +145,7 @@ Planning may operate in two modes:
 - full compile planning
 - incremental diff planning
 
-Planning consumes the Product Graph and any previous graph snapshot from `.prodara/graph.json`.
+Planning consumes the Product Graph and any previous graph snapshot from `.prodara/product-graph.json`.
 
 ## Graph slicing
 

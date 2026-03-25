@@ -443,7 +443,7 @@ describe('DEFAULT_CONFIG', () => {
   });
 
   it('has sensible preReview defaults', () => {
-    expect(DEFAULT_CONFIG.preReview.enabled).toBe(false);
+    expect(DEFAULT_CONFIG.preReview.enabled).toBe(true);
     expect(DEFAULT_CONFIG.preReview.maxIterations).toBe(2);
     expect(DEFAULT_CONFIG.preReview.fixSeverity).toEqual(['critical', 'error']);
   });

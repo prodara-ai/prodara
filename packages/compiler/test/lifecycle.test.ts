@@ -62,13 +62,13 @@ describe('Lifecycle', () => {
     it('cleans up temp files when active root has temps', () => {
       const prodaraDir = join(tempDir, '.prodara');
       mkdirSync(prodaraDir, { recursive: true });
-      writeFileSync(join(prodaraDir, 'graph.json.tmp'), '{}', 'utf-8');
+      writeFileSync(join(prodaraDir, 'product-graph.json.tmp'), '{}', 'utf-8');
       writeFileSync(join(prodaraDir, 'plan.json.tmp'), '{}', 'utf-8');
 
       setActiveRoot(tempDir);
       performCleanup();
 
-      expect(existsSync(join(prodaraDir, 'graph.json.tmp'))).toBe(false);
+      expect(existsSync(join(prodaraDir, 'product-graph.json.tmp'))).toBe(false);
       expect(existsSync(join(prodaraDir, 'plan.json.tmp'))).toBe(false);
     });
 

@@ -172,7 +172,7 @@ Compile `.prd` files and emit the Product Graph.
 prodara graph ./my-project
 
 # Write to file
-prodara graph --output build/graph.json ./my-project
+prodara graph --output build/product-graph.json ./my-project
 
 # Human-readable summary
 prodara graph --format human ./my-project

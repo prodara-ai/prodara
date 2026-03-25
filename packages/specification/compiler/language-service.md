@@ -194,7 +194,7 @@ The exposed graph follows the same format as `model/product-graph-format.md` but
 On startup, the language service should:
 
 1. Discover the `.prd` workspace
-2. Check for `.prodara/graph.json` from the last build
+2. Check for `.prodara/product-graph.json` from the last build
 3. If a cached graph exists, load it for instant navigation
 4. Begin incremental compilation from source
 5. Replace the cached graph with the live graph once compilation completes

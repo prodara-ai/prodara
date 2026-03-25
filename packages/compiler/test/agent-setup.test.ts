@@ -273,7 +273,7 @@ describe('Agent Setup', () => {
 
     it('includes product graph and incremental build details', () => {
       const content = buildPromptContent('my_app');
-      expect(content).toContain('graph.json');
+      expect(content).toContain('product-graph.json');
       expect(content).toContain('plan.json');
       expect(content).toContain('Incremental Builds');
       expect(content).toContain('semantic diff');

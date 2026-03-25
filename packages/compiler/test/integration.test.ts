@@ -97,7 +97,7 @@ describe('Compile — integration', () => {
     expect(result.diagnostics.hasErrors).toBe(false);
     // .prodara directory should exist
     expect(existsSync(join(tempDir, '.prodara', 'build.json'))).toBe(true);
-    expect(existsSync(join(tempDir, '.prodara', 'graph.json'))).toBe(true);
+    expect(existsSync(join(tempDir, '.prodara', 'product-graph.json'))).toBe(true);
   });
 
   it('reports error for unreadable file', () => {

@@ -263,7 +263,7 @@ const DEFAULT_REVIEW_FIX: ResolvedReviewFixConfig = {
 };
 
 const DEFAULT_PRE_REVIEW: ResolvedPreReviewConfig = {
-  enabled: false,
+  enabled: true,
   maxIterations: 2,
   fixSeverity: ['critical', 'error'],
 };

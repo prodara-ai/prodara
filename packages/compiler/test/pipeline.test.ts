@@ -583,8 +583,12 @@ describe('runPipeline', () => {
   // Pre-review phase
   // -------------------------------------------------------------------------
 
-  it('skips preReview when disabled in config (default)', async () => {
-    const result = await runPipeline('/tmp/project', config);
+  it('skips preReview when disabled in config', async () => {
+    const disabledConfig: ResolvedConfig = {
+      ...config,
+      preReview: { enabled: false, maxIterations: 2, fixSeverity: ['critical', 'error'] },
+    };
+    const result = await runPipeline('/tmp/project', disabledConfig);
     const pr = result.phases.find((p) => p.phase === 'preReview');
     expect(pr?.status).toBe('skipped');
     expect(pr?.detail).toContain('disabled in config');

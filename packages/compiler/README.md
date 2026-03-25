@@ -116,7 +116,7 @@ Run reviewers *before* implementation to catch spec-level issues early:
 
 `prodara init --ai <agent>` generates a single prompt file for 26 supported AI agents. The prompt drives the full 8-phase lifecycle:
 
-1. Clarify → 2. Specify → 3. Validate → 4. Build → 5. Govern → 6. Implement → 7. Review → 8. Deliver
+1. Clarify → 2. Specify → 3. Spec Review → 4. Build → 5. Govern → 6. Implement → 7. Code Review → 8. Deliver
 
 Each agent gets one file adapted to the platform's format (`.prompt.md` for Copilot, `.md` for Claude, `.mdc` for Cursor, etc.).
 

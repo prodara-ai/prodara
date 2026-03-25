@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Prodara Compiler — Build State
 // ---------------------------------------------------------------------------
-// Manages the .prodara/ directory: build.json, graph.json, plan.json
+// Manages the .prodara/ directory: build.json, product-graph.json, plan.json
 // All writes are atomic: write to temp files then rename.
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync, unlinkSync } from 'node:fs';
@@ -12,7 +12,7 @@ import type { Plan } from '../planner/plan-types.js';
 
 const BUILD_DIR = '.prodara';
 const BUILD_FILE = 'build.json';
-const GRAPH_FILE = 'graph.json';
+const GRAPH_FILE = 'product-graph.json';
 const PLAN_FILE = 'plan.json';
 const SOURCES_FILE = 'sources.json';
 const LOCK_FILE = '.lock';

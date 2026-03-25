@@ -60,11 +60,11 @@ You describe what you want
         ▼
 ┌──────────────────┐  Phase 1: Clarify ambiguities (only pause point)
 │   Clarify        │  Phase 2: Generate .prd specification files
-│   Specify        │  Phase 3: Validate specs (prodara validate + multi-perspective review)
+│   Specify        │  Phase 3: Spec review & fix loop (review loop 1 of 2)
 │   Build          │  Phase 4: Compile → Product Graph → Implementation Plan
 │   Govern         │  Phase 5: Generate governance files (agents.md)
 │   Implement      │  Phase 6: Write production code (every file, every function)
-│   Review         │  Phase 7: Multi-perspective review + auto-fix loop
+│   Review         │  Phase 7: Code review & fix loop (review loop 2 of 2)
 │   Deliver        │  Phase 8: Final validation + summary
 └──────────────────┘
         │
@@ -99,9 +99,10 @@ The AI agent executes all 8 phases autonomously. It only pauses to ask clarifica
 
 ### End-to-End AI Orchestration
 - **Single command** — `/Prodara <description>` drives the entire lifecycle
-- **8-phase workflow** — Clarify → Specify → Validate → Build → Govern → Implement → Review → Deliver
+- **8-phase workflow** — Clarify → Specify → Spec Review → Build → Govern → Implement → Code Review → Deliver
 - **26 supported AI platforms** — Copilot, Claude, Cursor, Gemini, Windsurf, Codex, Kiro, Jules, Amp, Roo, Aider, Cline, Continue, Zed, Bolt, Aide, Trae, Augment, Sourcegraph, TabNine, Supermaven, Void, PearAI, Double, OpenCode, and a generic adapter
 - **Autonomous execution** — Only pauses for genuinely ambiguous clarifications
+- **Two review & fix loops** — Spec review (pre-implementation) and code review (post-implementation), both configurable via `prodara.config.json`
 - **Multi-perspective review** — Architecture, security, code quality, test quality, UX, and spec compliance reviewers with auto-fix loop
 
 ### Specification Language
@@ -292,11 +293,11 @@ Once initialized, open the project in your IDE and use the `/prodara` command:
 The AI agent handles everything:
 1. **Clarifies** ambiguities (only pause point)
 2. **Generates** `.prd` specification files from your description
-3. **Validates** specs with `prodara validate` + multi-perspective review
+3. **Reviews specs** with `prodara validate` + multi-perspective spec review & fix loop
 4. **Builds** via `prodara build` — compiles specs and generates implementation plan
 5. **Creates governance** files (`agents.md`) for coding standards
 6. **Implements** every file — backend, frontend, database, tests, configs
-7. **Reviews** code from 6+ perspectives with auto-fix loop
+7. **Reviews code** from 6+ perspectives with auto-fix loop
 8. **Delivers** validated, production-ready application
 
 ### Design Principles
@@ -388,6 +389,11 @@ All settings are optional — sensible defaults are built in.
 {
   "phases": {
     "clarify": { "maxQuestions": 10, "minimumQuestionPriority": "medium" }
+  },
+  "preReview": {
+    "enabled": true,
+    "maxIterations": 2,
+    "fixSeverity": ["critical", "error"]
   },
   "reviewFix": {
     "maxIterations": 3,

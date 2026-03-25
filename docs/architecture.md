@@ -146,7 +146,7 @@ Entry point: `resolveRuntime(files, bind, graph, diagnostics)`
 Entry points: `readPreviousGraph(root)`, `writeBuildState(root, graph, plan, sourceFiles)`
 
 - Manages `.prodara/` directory at workspace root
-- Persists: `build.json` (build metadata + hashes), `graph.json`, `plan.json`
+- Persists: `build.json` (build metadata + hashes), `product-graph.json`, `plan.json`
 - Enables incremental compilation by providing previous graph for diffing
 
 ### 11. Generator Contracts (`src/generator/`)

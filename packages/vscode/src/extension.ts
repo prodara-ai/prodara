@@ -258,13 +258,13 @@ async function openGraphVisualizer(context: vscode.ExtensionContext): Promise<vo
   const workspaceRoot = getWorkspaceRoot();
   if (!workspaceRoot) return;
 
-  const graphPath = path.join(workspaceRoot, '.prodara', 'graph.json');
+  const graphPath = path.join(workspaceRoot, '.prodara', 'product-graph.json');
   let graphJson: string;
   try {
     const bytes = await vscode.workspace.fs.readFile(vscode.Uri.file(graphPath));
     graphJson = Buffer.from(bytes).toString('utf-8');
   } catch {
-    vscode.window.showWarningMessage('No graph.json found. Run `Prodara: Build` first.');
+    vscode.window.showWarningMessage('No product-graph.json found. Run `Prodara: Build` first.');
     return;
   }
 

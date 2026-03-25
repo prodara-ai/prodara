@@ -1350,7 +1350,7 @@ describe('graph --output', () => {
     const { mkdtempSync, readFileSync: fsRead, rmSync } = await import('node:fs');
     const { join } = await import('node:path');
     const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-graph-'));
-    const outFile = join(tmpDir, 'graph.json');
+    const outFile = join(tmpDir, 'product-graph.json');
     try {
       mockCompile.mockReturnValue(makeCompileResult({
         graphJson: '{"format":"prodara-product-graph"}',
@@ -1369,7 +1369,7 @@ describe('graph --output', () => {
     const { mkdtempSync, rmSync } = await import('node:fs');
     const { join } = await import('node:path');
     const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-graph-'));
-    const outFile = join(tmpDir, 'graph.json');
+    const outFile = join(tmpDir, 'product-graph.json');
     try {
       mockCompile.mockReturnValue(makeCompileResult({
         graphJson: '{"format":"prodara-product-graph"}',

@@ -86,14 +86,14 @@ describe('Build State', () => {
   });
 
   describe('writeBuildState', () => {
-    it('writes build.json, graph.json, plan.json', () => {
+    it('writes build.json, product-graph.json, plan.json', () => {
       const graph = makeGraph();
       const plan = makePlan(1);
       writeBuildState(tempDir, graph, plan, ['a.prd']);
 
       const dir = join(tempDir, '.prodara');
       expect(existsSync(join(dir, 'build.json'))).toBe(true);
-      expect(existsSync(join(dir, 'graph.json'))).toBe(true);
+      expect(existsSync(join(dir, 'product-graph.json'))).toBe(true);
       expect(existsSync(join(dir, 'plan.json'))).toBe(true);
     });
 
@@ -108,10 +108,10 @@ describe('Build State', () => {
       expect(build.sourceHash).toHaveLength(64); // SHA-256 hex
     });
 
-    it('graph.json matches written graph', () => {
+    it('product-graph.json matches written graph', () => {
       const graph = makeGraph();
       writeBuildState(tempDir, graph, makePlan(), ['src.prd']);
-      const saved = JSON.parse(readFileSync(join(tempDir, '.prodara', 'graph.json'), 'utf-8'));
+      const saved = JSON.parse(readFileSync(join(tempDir, '.prodara', 'product-graph.json'), 'utf-8'));
       expect(saved.product.name).toBe('TestProduct');
     });
 
@@ -141,7 +141,7 @@ describe('Build State', () => {
     it('no temp files remain after successful write', () => {
       writeBuildState(tempDir, makeGraph(), makePlan(), ['a.prd']);
       const dir = join(tempDir, '.prodara');
-      expect(existsSync(join(dir, 'graph.json.tmp'))).toBe(false);
+      expect(existsSync(join(dir, 'product-graph.json.tmp'))).toBe(false);
       expect(existsSync(join(dir, 'plan.json.tmp'))).toBe(false);
       expect(existsSync(join(dir, 'build.json.tmp'))).toBe(false);
     });
@@ -150,10 +150,10 @@ describe('Build State', () => {
   describe('cleanupTempFiles', () => {
     it('removes leftover temp files', () => {
       const dir = ensureBuildDir(tempDir);
-      writeFileSync(join(dir, 'graph.json.tmp'), 'partial', 'utf-8');
+      writeFileSync(join(dir, 'product-graph.json.tmp'), 'partial', 'utf-8');
       writeFileSync(join(dir, 'plan.json.tmp'), 'partial', 'utf-8');
       cleanupTempFiles(tempDir);
-      expect(existsSync(join(dir, 'graph.json.tmp'))).toBe(false);
+      expect(existsSync(join(dir, 'product-graph.json.tmp'))).toBe(false);
       expect(existsSync(join(dir, 'plan.json.tmp'))).toBe(false);
     });
 

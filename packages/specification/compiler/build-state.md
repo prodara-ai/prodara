@@ -23,7 +23,7 @@ All build state lives in a `.prodara/` directory at the product workspace root.
 
     .prodara/
       build.json
-      graph.json
+      product-graph.json
       plan.json
       artifacts.json
       products.json
@@ -34,7 +34,7 @@ All build state lives in a `.prodara/` directory at the product workspace root.
 | File               | Purpose                                                  |
 |--------------------|----------------------------------------------------------|
 | `build.json`       | Build metadata and status of the last successful build   |
-| `graph.json`       | Snapshot of the Product Graph from the last successful build |
+| `product-graph.json`       | Snapshot of the Product Graph from the last successful build |
 | `plan.json`        | Snapshot of the plan from the last successful build      |
 | `artifacts.json`   | Artifact manifest mapping graph nodes to generated files |
 | `products.json`    | Resolved product references for `product_ref` declarations |
@@ -77,7 +77,7 @@ File: `.prodara/build.json`
 | `timestamp`         | string | yes      | ISO 8601 timestamp of the build                          |
 | `compiler_version`  | string | yes      | Version of the compiler that produced the build          |
 | `source_hash`       | string | yes      | Deterministic hash of all `.prd` source files            |
-| `graph_hash`        | string | yes      | Hash of the `.prodara/graph.json` file                   |
+| `graph_hash`        | string | yes      | Hash of the `.prodara/product-graph.json` file                   |
 | `plan_hash`         | string | no       | Hash of the `.prodara/plan.json` file                    |
 | `artifact_count`    | integer| no       | Total number of generated artifacts                      |
 | `diagnostics_summary`| object| no       | Count of diagnostics by severity                         |
@@ -86,7 +86,7 @@ File: `.prodara/build.json`
 
 # Graph Snapshot
 
-File: `.prodara/graph.json`
+File: `.prodara/product-graph.json`
 
 This is a standard Product Graph file as defined in `model/product-graph-format.md`.
 
@@ -183,13 +183,13 @@ Extension seam entries track where handwritten code lives inside generated files
 When the compiler starts an incremental build, it follows this sequence:
 
 1. Read `.prodara/build.json` to confirm a previous successful build exists
-2. Read `.prodara/graph.json` as the baseline Product Graph
+2. Read `.prodara/product-graph.json` as the baseline Product Graph
 3. Compile the current spec into a new Product Graph
 4. Diff current graph against baseline graph (see `compiler/planning-engine.md`)
 5. Build an incremental plan
 6. Read `.prodara/artifacts.json` to determine which files are affected
 7. Generate only artifacts affected by the plan
-8. Write updated `.prodara/build.json`, `graph.json`, `plan.json`, and `artifacts.json`
+8. Write updated `.prodara/build.json`, `product-graph.json`, `plan.json`, and `artifacts.json`
 
 If `.prodara/build.json` does not exist or has `"status": "failed"`, the compiler performs a full build.
 
@@ -211,7 +211,7 @@ If either has changed, the planner may widen its diff strategy. A compiler versi
 If a build fails:
 
 - `.prodara/build.json` is written with `"status": "failed"`
-- `.prodara/graph.json` is NOT updated (preserves last good baseline)
+- `.prodara/product-graph.json` is NOT updated (preserves last good baseline)
 - `.prodara/plan.json` may be written for diagnostic inspection
 - `.prodara/artifacts.json` is NOT updated
 

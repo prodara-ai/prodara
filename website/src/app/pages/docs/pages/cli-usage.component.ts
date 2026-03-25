@@ -100,7 +100,7 @@ export class CliUsageComponent {
     {
       name: 'graph',
       desc: 'Compile and emit the Product Graph as JSON. The graph contains all nodes, 40+ edge types, and build metadata.',
-      example: 'prodara graph --output build/graph.json ./project',
+      example: 'prodara graph --output build/product-graph.json ./project',
     },
     {
       name: 'plan',

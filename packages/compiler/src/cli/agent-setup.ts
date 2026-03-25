@@ -429,7 +429,13 @@ every workflow needs its steps, every surface needs its sections.
 
 ---
 
-# Phase 3 — Spec Quality Gates (Spec Artifacts Only)
+# Phase 3 — Spec Review & Fix Loop (Review Loop 1 of 2)
+
+This is the **first review loop** — it runs on the generated \`.prd\` specification files before any code is written.
+Configurable via \`preReview\` in \`prodara.config.json\`:
+- \`preReview.enabled\` (default: \`true\`) — enable/disable this phase
+- \`preReview.maxIterations\` (default: \`2\`) — maximum review cycles
+- \`preReview.fixSeverity\` (default: \`["critical", "error"]\`) — which severities to auto-fix
 
 ## Validate — MANDATORY TERMINAL COMMAND
 
@@ -470,22 +476,22 @@ npx prodara build
 This compiles the specs, generates the Product Graph JSON, creates an
 implementation plan, runs reviews, and verifies integrity.
 
-You MUST actually run this command. It produces output files in \`.prodara/runs/\` including:
-- \`graph.json\` — the complete Product Graph (typed representation of the entire product)
+You MUST actually run this command. It produces output files in \`.prodara/\` including:
+- \`product-graph.json\` — the complete Product Graph (typed representation of the entire product)
 - \`plan.json\` — the implementation plan with ordered tasks
 - \`build.json\` — build metadata and checksums
 - \`sources.json\` — discovered source file paths
 
 ## Incremental Builds
 
-The compiler automatically detects whether a previous \`graph.json\` exists in \`.prodara/runs/\`.
+The compiler automatically detects whether a previous \`product-graph.json\` exists in \`.prodara/\`.
 - **First build**: Generates an initial plan with tasks for every node in the graph.
 - **Subsequent builds**: Produces a **semantic diff** — only the changes since the last build. The plan will contain only tasks for added, removed, or modified nodes, plus any nodes impacted by those changes.
 
-Read the plan from \`.prodara/runs/plan.json\`. Each task has an action (\`create\`, \`update\`, \`remove\`), a target node, and a reason.
+Read the plan from \`.prodara/plan.json\`. Each task has an action (\`create\`, \`update\`, \`remove\`), a target node, and a reason.
 Implementation tasks must be executed sequentially in the order given.
 
-**The \`graph.json\` file is committed to the repository** so incremental builds work across sessions.
+**The \`product-graph.json\` file is committed to the repository** so incremental builds work across sessions.
 
 If this command fails, fix the reported issues and re-run until it succeeds.
 You MUST NOT proceed to Phase 5 without a successful \`npx prodara build\`.
@@ -507,7 +513,7 @@ Before writing any application code:
 
 # Phase 6 — Implement
 
-Read the implementation plan from \`.prodara/runs/plan.json\` and the product graph from \`.prodara/runs/graph.json\`.
+Read the implementation plan from \`.prodara/plan.json\` and the product graph from \`.prodara/product-graph.json\`.
 Use the graph as the **source of truth** for what to build — it contains the typed representation of every entity, workflow, surface, and their relationships.
 
 Follow the implementation plan task order. Implement tasks strictly in order.
@@ -535,7 +541,13 @@ Do NOT:
 
 ---
 
-# Phase 7 — Validate & Review Loop
+# Phase 7 — Code Review & Fix Loop (Review Loop 2 of 2)
+
+This is the **second review loop** — it runs after code has been implemented.
+Configurable via \`reviewFix\` in \`prodara.config.json\`:
+- \`reviewFix.maxIterations\` (default: \`3\`) — maximum review cycles
+- \`reviewFix.fixSeverity\` (default: \`["critical", "error"]\`) — which severities to auto-fix
+- \`reviewFix.parallel\` (default: \`true\`) — run reviewers in parallel
 
 ## Step A — Validation
 
@@ -666,7 +678,32 @@ npx prodara test               # Run spec-level tests
 
 # Configuration
 
-Project settings live in \`prodara.config.json\`. Reviewers are configured under \`"reviewers"\` — built-in reviewers are enabled by default; custom reviewers live in \`.prodara/reviewers/*.md\`.
+Project settings live in \`prodara.config.json\`.
+
+## Review Loops
+
+Both review loops are configurable:
+
+\`\`\`json
+{
+  "preReview": {
+    "enabled": true,
+    "maxIterations": 2,
+    "fixSeverity": ["critical", "error"]
+  },
+  "reviewFix": {
+    "maxIterations": 3,
+    "fixSeverity": ["critical", "error"],
+    "parallel": true
+  },
+  "reviewers": {
+    "architecture": { "enabled": true },
+    "security": { "enabled": true }
+  }
+}
+\`\`\`
+
+Built-in reviewers are enabled by default; custom reviewers live in \`.prodara/reviewers/*.md\`.
 
 ---
 
@@ -678,11 +715,11 @@ spec/                    # All .prd specification files
   *.prd                  # Additional module specs
 src/                     # All application source code
 .prodara/
-  runs/
-    graph.json           # Product Graph (committed — enables incremental builds)
-    plan.json            # Implementation plan
-    build.json           # Build metadata
+  product-graph.json     # Product Graph (committed — enables incremental builds)
+  plan.json              # Implementation plan
+  build.json             # Build metadata
   reviewers/             # Reviewer skill files
+  runs/                  # Audit logs
 prodara.config.json      # Project configuration
 \`\`\`
 `;

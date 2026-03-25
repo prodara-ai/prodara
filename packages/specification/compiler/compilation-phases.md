@@ -206,7 +206,7 @@ On acceptance, the compiler writes the new build baseline to `.prodara/` (see `c
 Outputs:
 
 - `.prodara/build.json` — build metadata
-- `.prodara/graph.json` — current Product Graph snapshot
+- `.prodara/product-graph.json` — current Product Graph snapshot
 - `.prodara/plan.json` — plan snapshot
 - `.prodara/artifacts.json` — updated artifact manifest
 - `.prd.diagnostics.json` — full diagnostic report

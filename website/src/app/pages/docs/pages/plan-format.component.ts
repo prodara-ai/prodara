@@ -154,6 +154,6 @@ prodara diff ./project`;
 
   readonly buildState = `.prodara/
 ├── build.json    # Build metadata, timestamps, and source hashes
-├── graph.json    # Previous Product Graph snapshot
+├── product-graph.json    # Previous Product Graph snapshot
 └── plan.json     # Latest incremental plan`;
 }

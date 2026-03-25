@@ -276,7 +276,7 @@ export class DeepDiveComponent {
 prodara validate .
 
 # Compile to Product Graph
-prodara graph --output graph.json .
+prodara graph --output product-graph.json .
 
 # Run tests
 prodara test .

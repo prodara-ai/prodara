@@ -95,7 +95,7 @@ On first compilation (no previous graph), the plan contains:
 
 ## Incremental Plan
 
-On subsequent compilations, the plan compares the current graph to `.prodara/graph.json`:
+On subsequent compilations, the plan compares the current graph to `.prodara/product-graph.json`:
 1. Diff to find changed, added, and removed nodes
 2. Classify each change
 3. Propagate impact along graph edges
@@ -108,7 +108,7 @@ The plan is persisted alongside the graph in `.prodara/`:
 ```
 .prodara/
 ├── build.json     # Build metadata (version, timestamps, hashes)
-├── graph.json     # Current Product Graph
+├── product-graph.json     # Current Product Graph
 └── plan.json      # Current Plan
 ```
 

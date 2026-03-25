@@ -14,7 +14,7 @@ import { CodeBlockComponent } from '../../../components/code-block.component';
       </p>
 
       <h2 class="mt-10 text-2xl font-bold text-surface-950">Format Envelope</h2>
-      <app-code-block [code]="envelope" language="json" filename="graph.json" />
+      <app-code-block [code]="envelope" language="json" filename="product-graph.json" />
 
       <h2 class="mt-10 text-2xl font-bold text-surface-950">Full Example</h2>
       <p class="mt-2 text-surface-600">
@@ -123,7 +123,7 @@ export class ProductGraphComponent {
 prodara graph --format json ./project
 
 # Save to a specific file
-prodara graph --output build/graph.json ./project
+prodara graph --output build/product-graph.json ./project
 
 # Access programmatically
 import { buildGraph, serializeGraph } from '@prodara/compiler';`;

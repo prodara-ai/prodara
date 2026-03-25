@@ -42,7 +42,7 @@ If exit code is `1`, parse the JSON diagnostics from stderr to understand and fi
 ### Step 2: Build Graph
 
 ```bash
-prodara graph --format json --output .prodara/graph.json ./project
+prodara graph --format json --output .prodara/product-graph.json ./project
 ```
 
 The agent can parse the Product Graph JSON to understand the product model, inspect nodes and edges, and reason about the specification.
