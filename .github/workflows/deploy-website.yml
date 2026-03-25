@@ -2,9 +2,8 @@ name: Deploy Website to GitHub Pages
 
 on:
   push:
-    branches: [main]
-    paths:
-      - 'website/**'
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 permissions:
