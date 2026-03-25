@@ -412,6 +412,10 @@ The ONLY exception is a fundamental blocker → use BLOCKED format.
 # Phase 2 — Specification
 
 Write (or update) the \`.prd\` specification files for the requested product "${productName}".
+
+**All \`.prd\` files MUST be placed in the \`spec/\` directory** (e.g., \`spec/app.prd\`, \`spec/auth.prd\`).
+Never place \`.prd\` files in the project root or under \`src/\`.
+
 Include **all** of the following blocks as appropriate:
 - \`product\` / \`module\` — project structure
 - \`constitution\` / \`security\` / \`privacy\` — governance rules
@@ -466,9 +470,22 @@ npx prodara build
 This compiles the specs, generates the Product Graph JSON, creates an
 implementation plan, runs reviews, and verifies integrity.
 
-You MUST actually run this command. It produces output files in \`.prodara/runs/\` including the product graph and implementation plan.
-Read the build output and implementation plan from \`.prodara/runs/\`.
+You MUST actually run this command. It produces output files in \`.prodara/runs/\` including:
+- \`graph.json\` — the complete Product Graph (typed representation of the entire product)
+- \`plan.json\` — the implementation plan with ordered tasks
+- \`build.json\` — build metadata and checksums
+- \`sources.json\` — discovered source file paths
+
+## Incremental Builds
+
+The compiler automatically detects whether a previous \`graph.json\` exists in \`.prodara/runs/\`.
+- **First build**: Generates an initial plan with tasks for every node in the graph.
+- **Subsequent builds**: Produces a **semantic diff** — only the changes since the last build. The plan will contain only tasks for added, removed, or modified nodes, plus any nodes impacted by those changes.
+
+Read the plan from \`.prodara/runs/plan.json\`. Each task has an action (\`create\`, \`update\`, \`remove\`), a target node, and a reason.
 Implementation tasks must be executed sequentially in the order given.
+
+**The \`graph.json\` file is committed to the repository** so incremental builds work across sessions.
 
 If this command fails, fix the reported issues and re-run until it succeeds.
 You MUST NOT proceed to Phase 5 without a successful \`npx prodara build\`.
@@ -490,16 +507,23 @@ Before writing any application code:
 
 # Phase 6 — Implement
 
+Read the implementation plan from \`.prodara/runs/plan.json\` and the product graph from \`.prodara/runs/graph.json\`.
+Use the graph as the **source of truth** for what to build — it contains the typed representation of every entity, workflow, surface, and their relationships.
+
 Follow the implementation plan task order. Implement tasks strictly in order.
+
+**All application source code MUST be placed under the \`src/\` directory.**
+Project config files (package.json, tsconfig.json, etc.) stay in the project root.
+
 Write the **actual application code** — every file, every function:
 
-- Project setup (package.json, tsconfig, etc.)
-- Database schema / migrations
-- Backend: API routes, controllers, services, middleware
-- Frontend: pages, components, state management, styling
-- Authentication and authorization
-- Tests (unit, integration, e2e)
-- Configuration files (env, docker, CI)
+- Project setup (package.json, tsconfig, etc.) — in project root
+- Database schema / migrations — under \`src/\`
+- Backend: API routes, controllers, services, middleware — under \`src/\`
+- Frontend: pages, components, state management, styling — under \`src/\`
+- Authentication and authorization — under \`src/\`
+- Tests (unit, integration, e2e) — under \`src/\` or \`test/\`
+- Configuration files (env, docker, CI) — in project root
 
 The code must be **production-ready** — not stubs, not placeholders.
 
@@ -507,6 +531,7 @@ Do NOT:
 - Add features beyond tasks
 - Refactor unrelated code
 - Modify spec artifacts unless explicitly required
+- Place source code outside \`src/\` (except project config and tests)
 
 ---
 
@@ -642,6 +667,24 @@ npx prodara test               # Run spec-level tests
 # Configuration
 
 Project settings live in \`prodara.config.json\`. Reviewers are configured under \`"reviewers"\` — built-in reviewers are enabled by default; custom reviewers live in \`.prodara/reviewers/*.md\`.
+
+---
+
+# Project Structure
+
+\`\`\`
+spec/                    # All .prd specification files
+  app.prd                # Main product spec
+  *.prd                  # Additional module specs
+src/                     # All application source code
+.prodara/
+  runs/
+    graph.json           # Product Graph (committed — enables incremental builds)
+    plan.json            # Implementation plan
+    build.json           # Build metadata
+  reviewers/             # Reviewer skill files
+prodara.config.json      # Project configuration
+\`\`\`
 `;
 }
 

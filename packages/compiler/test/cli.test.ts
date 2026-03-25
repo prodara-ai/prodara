@@ -571,7 +571,7 @@ describe('init command', () => {
     try {
       const program = createProgram();
       await runCommand(program, ['init', tmpDir, '--name', 'test_app']);
-      expect(stdoutOutput).toContain('Created app.prd');
+      expect(stdoutOutput).toContain('Created spec/app.prd');
       expect(stdoutOutput).toContain('Created .prodara/reviewers/');
       expect(process.exitCode).toBe(0);
 
@@ -619,7 +619,7 @@ describe('init command', () => {
       const program = createProgram();
       await runCommand(program, ['init', tmpDir, '--name', 'test_app']);
       expect(mockExecSync).toHaveBeenCalledWith('npm init -y', expect.objectContaining({ cwd: expect.stringContaining(tmpDir) }));
-      expect(stdoutOutput).toContain('Created app.prd');
+      expect(stdoutOutput).toContain('Created spec/app.prd');
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
@@ -633,7 +633,7 @@ describe('init command', () => {
       const program = createProgram();
       await runCommand(program, ['init', tmpDir, '--name', 'test_app']);
       expect(mockExecSync).toHaveBeenCalledWith('npm install --save-dev @prodara/compiler', expect.objectContaining({ cwd: expect.stringContaining(tmpDir) }));
-      expect(stdoutOutput).toContain('Created app.prd');
+      expect(stdoutOutput).toContain('Created spec/app.prd');
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }
@@ -662,7 +662,7 @@ describe('init command', () => {
       const program = createProgram();
       await runCommand(program, ['init', tmpDir, '--name', 'test_app', '--skip-install']);
       expect(mockExecSync).not.toHaveBeenCalled();
-      expect(stdoutOutput).toContain('Created app.prd');
+      expect(stdoutOutput).toContain('Created spec/app.prd');
       expect(process.exitCode).toBe(0);
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
@@ -694,7 +694,7 @@ describe('init command', () => {
       const program = createProgram();
       await runCommand(program, ['init', tmpDir, '--name', 'test_app']);
       expect(stderrOutput).toContain('Install it manually');
-      expect(stdoutOutput).toContain('Created app.prd');
+      expect(stdoutOutput).toContain('Created spec/app.prd');
       expect(process.exitCode).toBe(0);
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
@@ -1978,7 +1978,7 @@ describe('init command — template', () => {
       expect(stdoutOutput).toContain('Initialized');
       expect(stdoutOutput).toContain('template: minimal');
       expect(stdoutOutput).toContain('app.prd');
-      expect(fsRead(join(tmpDir, 'app.prd'), 'utf-8')).toBe('product test {}');
+      expect(fsRead(join(tmpDir, 'spec', 'app.prd'), 'utf-8')).toBe('product test {}');
       expect(process.exitCode).toBe(0);
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });

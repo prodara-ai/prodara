@@ -259,6 +259,33 @@ describe('Agent Setup', () => {
       const content = buildPromptContent('my_app');
       expect(content).toContain('prodara.config.json');
     });
+
+    it('requires .prd files in spec/ directory', () => {
+      const content = buildPromptContent('my_app');
+      expect(content).toContain('spec/');
+      expect(content).toContain('All `.prd` files MUST be placed in the `spec/` directory');
+    });
+
+    it('requires source code in src/ directory', () => {
+      const content = buildPromptContent('my_app');
+      expect(content).toContain('All application source code MUST be placed under the `src/` directory');
+    });
+
+    it('includes product graph and incremental build details', () => {
+      const content = buildPromptContent('my_app');
+      expect(content).toContain('graph.json');
+      expect(content).toContain('plan.json');
+      expect(content).toContain('Incremental Builds');
+      expect(content).toContain('semantic diff');
+    });
+
+    it('includes project structure section', () => {
+      const content = buildPromptContent('my_app');
+      expect(content).toContain('Project Structure');
+      expect(content).toContain('spec/');
+      expect(content).toContain('src/');
+      expect(content).toContain('.prodara/');
+    });
   });
 
   describe('writePromptFiles', () => {

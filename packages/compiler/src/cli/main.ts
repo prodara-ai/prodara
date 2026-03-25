@@ -353,12 +353,15 @@ program
   .option('--skip-install', 'Skip automatic npm init and compiler installation')
   .action(async (path: string, opts: { name: string; template?: string; ai?: string; aiCommandsDir?: string; skipInstall?: boolean }) => {
     const root = resolve(path);
-    const appPrd = join(root, 'app.prd');
+    const specDir = join(root, 'spec');
+    const appPrd = join(specDir, 'app.prd');
     const configFile = join(root, CONFIG_FILENAME);
     const prodaraDir = join(root, '.prodara');
 
-    if (existsSync(appPrd)) {
-      process.stderr.write(uiError(`Already initialized: ${appPrd} exists`) + '\n');
+    // Also check legacy root-level app.prd for backward compatibility
+    if (existsSync(appPrd) || existsSync(join(root, 'app.prd'))) {
+      const existing = existsSync(appPrd) ? appPrd : join(root, 'app.prd');
+      process.stderr.write(uiError(`Already initialized: ${existing} exists`) + '\n');
       process.exitCode = 1;
       return;
     }
@@ -412,15 +415,16 @@ program
         return;
       }
       for (const f of tmpl.files) {
-        const filePath = join(root, f.path);
+        const filePath = join(specDir, f.path);
         mkdirSync(dirname(filePath), { recursive: true });
         writeFileSync(filePath, f.content, 'utf-8');
       }
       process.stdout.write(success(`Initialized Prodara project (template: ${tmpl.name})`) + '\n');
       for (const f of tmpl.files) {
-        process.stdout.write(`  ${success(f.path)}\n`);
+        process.stdout.write(`  ${success(`spec/${f.path}`)}\n`);
       }
     } else {
+      mkdirSync(specDir, { recursive: true });
       writeFileSync(appPrd, `product ${opts.name} {
   title: "${opts.name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}"
   version: "0.1.0"
@@ -437,7 +441,7 @@ module core {
 
 }
 `, 'utf-8');
-      process.stdout.write(success('Created app.prd') + '\n');
+      process.stdout.write(success('Created spec/app.prd') + '\n');
     }
 
     writeFileSync(configFile, JSON.stringify({
@@ -664,7 +668,10 @@ program
     }
 
     if (resolvedAgent) {
-      const appPrd = join(root, 'app.prd');
+      // Check spec/ first then fall back to root for legacy projects
+      const specAppPrd = join(root, 'spec', 'app.prd');
+      const rootAppPrd = join(root, 'app.prd');
+      const appPrd = existsSync(specAppPrd) ? specAppPrd : rootAppPrd;
       let name = 'my_app';
       /* v8 ignore next 5 -- name extraction from existing .prd */
       if (existsSync(appPrd)) {
