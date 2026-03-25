@@ -106,8 +106,8 @@ import { CalloutComponent } from '../../../components/callout.component';
 
       <h2 class="mt-10 text-2xl font-bold text-surface-950">Next Steps</h2>
       <p class="text-surface-600">
-        Explore the full set of
-        <a routerLink="/docs/slash-commands" class="text-primary-600 hover:underline">29 slash commands</a>
+        Learn about the
+        <a routerLink="/docs/slash-commands" class="text-primary-600 hover:underline">single AI prompt file</a>
         generated for each agent, try
         <a routerLink="/docs/interactive-modes" class="text-primary-600 hover:underline">interactive modes</a>
         like Explore, Help, and Party, or configure

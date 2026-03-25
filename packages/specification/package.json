@@ -14,7 +14,7 @@
   },
   "type": "module",
   "private": false,
-  "license": "MIT",
+  "license": "Apache-2.0",
   "files": [
     "language",
     "model",

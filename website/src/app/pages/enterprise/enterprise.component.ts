@@ -158,7 +158,7 @@ export class EnterpriseComponent {
     },
     {
       title: 'AI-powered code generation at scale',
-      desc: 'Feed deterministic Product Graph JSON and incremental plans to your AI agents. Every agent — from Copilot to Claude to custom LLMs — gets the same reproducible context via 29 slash commands.',
+      desc: 'Feed deterministic Product Graph JSON and incremental plans to your AI agents. Every agent — from Copilot to Claude to custom LLMs — gets the same reproducible context via a single AI prompt file.',
     },
     {
       title: 'Regulated industry products',

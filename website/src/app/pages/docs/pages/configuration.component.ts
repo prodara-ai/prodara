@@ -135,7 +135,7 @@ export class ConfigurationComponent {
     },
     {
       key: 'agent',
-      desc: 'Configure agent-specific behavior for slash command generation.',
+      desc: 'Configure agent-specific behavior for prompt file generation.',
       options: [
         { name: 'platform', type: 'AgentPlatform', default: '"generic"', desc: 'Target AI agent platform.' },
         { name: 'provider', type: 'ApiProvider', default: '—', desc: 'AI provider for the agent.' },

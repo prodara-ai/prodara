@@ -8,10 +8,9 @@ import { RouterLink } from '@angular/router';
     <article class="prose max-w-none">
       <h1 class="text-3xl font-bold tracking-tight text-surface-950">Prodara Documentation</h1>
       <p class="mt-4 text-lg leading-relaxed text-surface-600">
-        Prodara is an AI-native product specification ecosystem. Write declarative <code>.prd</code> files
-        that describe your software product - entities, workflows, screens, permissions, governance -
-        and the compiler validates everything, then outputs a deterministic
-        <strong>Product Graph</strong> that AI coding agents consume directly.
+        Prodara compiles <code>.prd</code> specs into a typed Product Graph. Write declarative files
+        that describe your software product — entities, workflows, screens, permissions, governance —
+        and the compiler validates everything through a 13-phase pipeline. Change a spec and your agent knows exactly what's impacted — <strong>no scanning your codebase</strong>.
       </p>
 
       <!-- Ecosystem overview -->
@@ -65,7 +64,7 @@ import { RouterLink } from '@angular/router';
       <h2 class="mt-12 text-2xl font-bold text-surface-950">Design Goals</h2>
       <ul class="mt-4 space-y-2 text-surface-600">
         <li><strong class="text-surface-900">Human-readable</strong> - Plain text specs that anyone on the team can understand - product managers, designers, and engineers</li>
-        <li><strong class="text-surface-900">AI-native</strong> - Built for AI agents: non-interactive CLI, JSON output, stable contracts, suggested fixes, and 29 slash commands</li>
+        <li><strong class="text-surface-900">AI-native</strong> - Built for AI agents: non-interactive CLI, JSON output, stable contracts, suggested fixes, and a single AI prompt file</li>
         <li><strong class="text-surface-900">Deterministic</strong> - Same input always produces the exact same Product Graph (SHA-256 verified)</li>
         <li><strong class="text-surface-900">Git-friendly</strong> - Merge specs like code, track changes over time, and use proposals for isolated change management</li>
         <li><strong class="text-surface-900">Governance-first</strong> - Constitution-governed generation with security, privacy, compliance, and code style policies at three stacking layers</li>
@@ -107,8 +106,8 @@ export class DocsOverviewComponent {
     { path: '/docs/configuration', title: 'Configuration', desc: 'Configure the compiler, reviewers, workflows, and more via prodara.config.json.' },
     { path: '/docs/product-graph', title: 'Product Graph', desc: 'The canonical JSON output with 40+ typed edge relationships.' },
     { path: '/docs/diagnostics', title: 'Diagnostics', desc: 'Structured error codes, severities, and suggested fixes.' },
-    { path: '/docs/agent-integration', title: 'AI Agent Integration', desc: '26+ supported agents with slash commands and structured JSON output.' },
-    { path: '/docs/slash-commands', title: 'Slash Commands', desc: '29 slash commands in 4 categories for AI agent workflows.' },
+    { path: '/docs/agent-integration', title: 'AI Agent Integration', desc: '26+ supported agents with a single AI prompt file and structured JSON output.' },
+    { path: '/docs/slash-commands', title: 'AI Prompt File', desc: 'One prompt file that teaches your agent the complete 8-phase lifecycle.' },
     { path: '/docs/interactive-modes', title: 'Interactive Modes', desc: 'Explore, Help, Party, Design, and Onboard modes for AI agents.' },
     { path: '/docs/customization', title: 'Reviewers & Constitution', desc: '9 built-in reviewers, custom reviewers, and constitution governance.' },
     { path: '/docs/extensions', title: 'Extensions & Presets', desc: 'Plugin system with marketplace, 5 capability kinds, and shareable presets.' },

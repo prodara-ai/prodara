@@ -72,7 +72,7 @@ export class DocsLayoutComponent {
       title: 'AI & Agents',
       items: [
         { path: '/docs/agent-integration', label: 'Agent Integration' },
-        { path: '/docs/slash-commands', label: 'Slash Commands' },
+        { path: '/docs/slash-commands', label: 'AI Prompt File' },
         { path: '/docs/interactive-modes', label: 'Interactive Modes' },
       ],
     },

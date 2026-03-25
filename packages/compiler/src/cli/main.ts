@@ -502,7 +502,7 @@ module core {
       const agentConfig = getAgentConfig(agentId);
       /* v8 ignore next -- triple fallback for command dir */
       const commandsDir = opts.aiCommandsDir ?? agentConfig?.commandsDir ?? '.ai/commands';
-      process.stdout.write(success(`Created slash commands in ${commandsDir}/`) + '\n');
+      process.stdout.write(success(`Created prompt file in ${commandsDir}/`) + '\n');
       for (const cmd of commands) {
         const rel = relative(root, cmd.path);
         process.stdout.write(`  ${dim(rel)}\n`);
@@ -675,7 +675,7 @@ program
 
       const commands = generateSlashCommands(resolvedAgent, root, name, opts.aiCommandsDir);
       writeSlashCommands(commands);
-      changes.push(`Regenerated slash commands for ${resolvedAgent}`);
+      changes.push(`Regenerated prompt file for ${resolvedAgent}`);
     }
 
     // Output

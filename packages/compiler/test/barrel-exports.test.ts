@@ -64,7 +64,9 @@ describe('Barrel exports', () => {
     expect(mod.runClarifyPhase).toBeDefined();
     expect(mod.PHASE_KINDS).toBeDefined();
     expect(mod.verify).toBeDefined();
-    expect(mod.SLASH_COMMAND_COUNT).toBeDefined();
+    expect(mod.generatePromptFile).toBeDefined();
+    expect(mod.writePromptFiles).toBeDefined();
+    expect(mod.buildPromptContent).toBeDefined();
     expect(mod.searchMarketplace).toBeDefined();
     expect(mod.npmInstall).toBeDefined();
     expect(mod.npmRemove).toBeDefined();

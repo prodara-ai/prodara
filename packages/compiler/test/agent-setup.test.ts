@@ -1,18 +1,20 @@
 // ---------------------------------------------------------------------------
-// Tests — Agent Slash Command Generation
+// Tests — Agent Prompt Generation
 // ---------------------------------------------------------------------------
 
 import { describe, it, expect } from 'vitest';
 import {
+  generatePromptFile,
+  writePromptFiles,
   generateSlashCommands,
   writeSlashCommands,
   isValidAgentId,
   listSupportedAgents,
   getAgentConfig,
   detectAgent,
-  SLASH_COMMAND_COUNT,
+  buildPromptContent,
 } from '../src/cli/agent-setup.js';
-import type { AgentId } from '../src/cli/agent-setup.js';
+import type { AgentId, PromptFile, SlashCommandFile } from '../src/cli/agent-setup.js';
 import { mkdtempSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -96,205 +98,217 @@ describe('Agent Setup', () => {
     });
   });
 
-  describe('generateSlashCommands', () => {
-    it('generates 29 slash commands for claude', () => {
+  describe('generatePromptFile', () => {
+    it('generates exactly 1 prompt file for claude', () => {
       const root = makeTempDir();
-      const commands = generateSlashCommands('claude', root, 'my_app');
-      expect(commands).toHaveLength(29);
-      for (const cmd of commands) {
-        expect(cmd.path).toContain('.claude/commands/prodara');
-        expect(cmd.path).toMatch(/\.md$/);
-        expect(cmd.content).toContain('# Prodara:');
-      }
+      const files = generatePromptFile('claude', root, 'my_app');
+      expect(files).toHaveLength(1);
+      expect(files[0]!.path).toContain('.claude/commands/prodara');
+      expect(files[0]!.path).toMatch(/\.md$/);
+      expect(files[0]!.content).toContain('# Prodara');
     });
 
-    it('generates main prompt as prodara.md (not prodara-build.md) for claude', () => {
+    it('generates copilot prompt with YAML frontmatter', () => {
       const root = makeTempDir();
-      const commands = generateSlashCommands('claude', root, 'my_app');
-      const buildCmd = commands.find(c => c.content.includes('Full Build Pipeline'));
-      expect(buildCmd).toBeDefined();
-      expect(buildCmd!.path).toMatch(/\/prodara\.md$/);
+      const files = generatePromptFile('copilot', root, 'my_app');
+      expect(files).toHaveLength(1);
+      expect(files[0]!.path).toContain('.github/prompts/prodara');
+      expect(files[0]!.path).toMatch(/\.prompt\.md$/);
+      expect(files[0]!.content).toContain('---');
+      expect(files[0]!.content).toContain('name: Prodara');
+      expect(files[0]!.content).toContain('description:');
+      expect(files[0]!.content).toContain('mode: agent');
     });
 
-    it('generates copilot commands with YAML frontmatter', () => {
+    it('generates cursor prompt with YAML frontmatter and globs', () => {
       const root = makeTempDir();
-      const commands = generateSlashCommands('copilot', root, 'my_app');
-      expect(commands).toHaveLength(29);
-      for (const cmd of commands) {
-        expect(cmd.path).toContain('.github/prompts/prodara');
-        expect(cmd.path).toMatch(/\.prompt\.md$/);
-        expect(cmd.content).toContain('---');
-        expect(cmd.content).toContain('description:');
-        expect(cmd.content).toContain('mode: agent');
-        expect(cmd.content).not.toContain('tools:');
-      }
+      const files = generatePromptFile('cursor', root, 'my_app');
+      expect(files).toHaveLength(1);
+      expect(files[0]!.path).toContain('.cursor/rules/prodara');
+      expect(files[0]!.path).toMatch(/\.mdc$/);
+      expect(files[0]!.content).toContain('---');
+      expect(files[0]!.content).toContain('globs:');
     });
 
-    it('generates main prompt as prodara.prompt.md for copilot with name field', () => {
+    it('generates generic prompt without frontmatter', () => {
       const root = makeTempDir();
-      const commands = generateSlashCommands('copilot', root, 'my_app');
-      const buildCmd = commands.find(c => c.content.includes('Full Build Pipeline'));
-      expect(buildCmd).toBeDefined();
-      expect(buildCmd!.path).toMatch(/\/prodara\.prompt\.md$/);
-      expect(buildCmd!.content).toContain('name: Prodara');
-    });
-
-    it('copilot non-build commands do not include name field', () => {
-      const root = makeTempDir();
-      const commands = generateSlashCommands('copilot', root, 'my_app');
-      const nonBuildCmds = commands.filter(c => !c.content.includes('Full Build Pipeline'));
-      expect(nonBuildCmds.length).toBeGreaterThan(0);
-      for (const cmd of nonBuildCmds) {
-        expect(cmd.content).not.toContain('name: Prodara');
-      }
-    });
-
-    it('generates cursor commands with YAML frontmatter', () => {
-      const root = makeTempDir();
-      const commands = generateSlashCommands('cursor', root, 'my_app');
-      expect(commands).toHaveLength(29);
-      for (const cmd of commands) {
-        expect(cmd.path).toContain('.cursor/rules/prodara');
-        expect(cmd.path).toMatch(/\.mdc$/);
-        expect(cmd.content).toContain('---');
-        expect(cmd.content).toContain('globs:');
-      }
-    });
-
-    it('generates generic commands without frontmatter', () => {
-      const root = makeTempDir();
-      const commands = generateSlashCommands('generic', root, 'my_app');
-      expect(commands).toHaveLength(29);
-      for (const cmd of commands) {
-        expect(cmd.content).not.toMatch(/^---/);
-      }
+      const files = generatePromptFile('generic', root, 'my_app');
+      expect(files).toHaveLength(1);
+      expect(files[0]!.content).not.toMatch(/^---/);
     });
 
     it('uses custom directory when provided', () => {
       const root = makeTempDir();
-      const commands = generateSlashCommands('generic', root, 'my_app', '.myagent/cmds');
-      expect(commands).toHaveLength(29);
-      for (const cmd of commands) {
-        expect(cmd.path).toContain('.myagent/cmds/prodara');
+      const files = generatePromptFile('generic', root, 'my_app', '.myagent/cmds');
+      expect(files).toHaveLength(1);
+      expect(files[0]!.path).toContain('.myagent/cmds/prodara');
+    });
+
+    it('includes product name in prompt content', () => {
+      const root = makeTempDir();
+      const files = generatePromptFile('claude', root, 'billing_app');
+      expect(files[0]!.content).toContain('billing_app');
+    });
+
+    it('generates prompt for all 26 agent types', () => {
+      const root = makeTempDir();
+      const agents = listSupportedAgents();
+      for (const agent of agents) {
+        const files = generatePromptFile(agent, root, 'my_app');
+        expect(files).toHaveLength(1);
+        expect(files[0]!.path).toBeTruthy();
+        expect(files[0]!.content.length).toBeGreaterThan(0);
       }
     });
 
-    it('includes product name in command content', () => {
+    it('generates files in correct agent directories', () => {
       const root = makeTempDir();
-      const commands = generateSlashCommands('claude', root, 'billing_app');
-      const specifyCmd = commands.find(c => c.path.includes('specify'));
-      expect(specifyCmd).toBeDefined();
-      expect(specifyCmd!.content).toContain('billing_app');
-    });
-
-    it('generates all expected command slugs', () => {
-      const root = makeTempDir();
-      const commands = generateSlashCommands('claude', root, 'my_app');
-      const slugs = commands.map(c => {
-        const mainMatch = c.path.match(/\/prodara\.\w/);
-        if (mainMatch) return 'build';
-        const match = c.path.match(/prodara-([\w-]+)\./);
-        return match?.[1];
-      });
-      // Workflow
-      expect(slugs).toContain('build');
-      expect(slugs).toContain('validate');
-      expect(slugs).toContain('constitution');
-      expect(slugs).toContain('specify');
-      expect(slugs).toContain('plan');
-      expect(slugs).toContain('implement');
-      expect(slugs).toContain('clarify');
-      expect(slugs).toContain('review');
-      expect(slugs).toContain('propose');
-      expect(slugs).toContain('explore');
-      expect(slugs).toContain('party');
-      // Spec-edit
-      expect(slugs).toContain('add-module');
-      expect(slugs).toContain('add-entity');
-      expect(slugs).toContain('add-workflow');
-      expect(slugs).toContain('add-screen');
-      expect(slugs).toContain('add-policy');
-      expect(slugs).toContain('rename');
-      expect(slugs).toContain('move');
-      // Query
-      expect(slugs).toContain('explain');
-      expect(slugs).toContain('why');
-      expect(slugs).toContain('graph');
-      expect(slugs).toContain('diff');
-      expect(slugs).toContain('drift');
-      expect(slugs).toContain('analyze');
-      expect(slugs).toContain('checklist');
-      // Management
-      expect(slugs).toContain('help');
-      expect(slugs).toContain('onboard');
-      expect(slugs).toContain('extensions');
-      expect(slugs).toContain('presets');
-    });
-
-    it('SLASH_COMMAND_COUNT matches generated commands', () => {
-      const root = makeTempDir();
-      const commands = generateSlashCommands('claude', root, 'my_app');
-      expect(commands).toHaveLength(SLASH_COMMAND_COUNT);
-    });
-
-    it('assigns categories to all commands', () => {
-      const root = makeTempDir();
-      const commands = generateSlashCommands('claude', root, 'my_app');
-      // Every command should have non-empty content (categories are internal)
-      for (const cmd of commands) {
-        expect(cmd.content.length).toBeGreaterThan(0);
-      }
-    });
-
-    it('includes reference section in all commands', () => {
-      const root = makeTempDir();
-      const commands = generateSlashCommands('claude', root, 'my_app');
-      for (const cmd of commands) {
-        expect(cmd.content).toContain('## Reference');
-        expect(cmd.content).toContain('prodara.config.json');
+      const expectations: Partial<Record<AgentId, string>> = {
+        copilot: '.github/prompts',
+        claude: '.claude/commands',
+        cursor: '.cursor/rules',
+        gemini: '.gemini/prompts',
+        windsurf: '.windsurf/commands',
+        codex: '.codex',
+        opencode: '.opencode/agent',
+        amp: '.amp/commands',
+        roo: '.roo/commands',
+        kiro: '.kiro/commands',
+        jules: '.jules/prompts',
+        aider: '.aider/prompts',
+        cline: '.cline/rules',
+        continue: '.continue/rules',
+        zed: '.zed/prompts',
+        bolt: '.bolt/prompts',
+        aide: '.aide/prompts',
+        trae: '.trae/rules',
+        augment: '.augment/prompts',
+        sourcegraph: '.sourcegraph/prompts',
+        tabnine: '.tabnine/prompts',
+        supermaven: '.supermaven/prompts',
+        void: '.void/prompts',
+        pear: '.pear/prompts',
+        double: '.double/prompts',
+        generic: '.ai/commands',
+      };
+      for (const [agent, dir] of Object.entries(expectations)) {
+        const files = generatePromptFile(agent as AgentId, root, 'my_app');
+        expect(files[0]!.path).toContain(dir);
       }
     });
   });
 
-  describe('writeSlashCommands', () => {
-    it('writes command files to disk', () => {
+  describe('buildPromptContent', () => {
+    it('includes all 8 phases', () => {
+      const content = buildPromptContent('test_app');
+      expect(content).toContain('Phase 1');
+      expect(content).toContain('Phase 2');
+      expect(content).toContain('Phase 3');
+      expect(content).toContain('Phase 4');
+      expect(content).toContain('Phase 5');
+      expect(content).toContain('Phase 6');
+      expect(content).toContain('Phase 7');
+      expect(content).toContain('Phase 8');
+    });
+
+    it('includes product name', () => {
+      const content = buildPromptContent('billing_app');
+      expect(content).toContain('billing_app');
+    });
+
+    it('includes the core contract', () => {
+      const content = buildPromptContent('my_app');
+      expect(content).toContain('Core Contract');
+    });
+
+    it('includes repository governance', () => {
+      const content = buildPromptContent('my_app');
+      expect(content).toContain('Repository Governance');
+      expect(content).toContain('agents.md');
+    });
+
+    it('includes failure escalation protocol', () => {
+      const content = buildPromptContent('my_app');
+      expect(content).toContain('BLOCKED');
+      expect(content).toContain('Failure Escalation');
+    });
+
+    it('includes .prd language reference', () => {
+      const content = buildPromptContent('my_app');
+      expect(content).toContain('.prd Language');
+      expect(content).toContain('entity');
+      expect(content).toContain('workflow');
+      expect(content).toContain('surface');
+    });
+
+    it('includes CLI reference', () => {
+      const content = buildPromptContent('my_app');
+      expect(content).toContain('prodara build');
+      expect(content).toContain('prodara validate');
+      expect(content).toContain('prodara test');
+    });
+
+    it('includes configuration reference', () => {
+      const content = buildPromptContent('my_app');
+      expect(content).toContain('prodara.config.json');
+    });
+  });
+
+  describe('writePromptFiles', () => {
+    it('writes prompt files to disk', () => {
       const root = makeTempDir();
-      const commands = generateSlashCommands('claude', root, 'my_app');
-      writeSlashCommands(commands);
-      for (const cmd of commands) {
-        expect(existsSync(cmd.path)).toBe(true);
-        const content = readFileSync(cmd.path, 'utf-8');
-        expect(content).toBe(cmd.content);
+      const files = generatePromptFile('claude', root, 'my_app');
+      writePromptFiles(files);
+      for (const file of files) {
+        expect(existsSync(file.path)).toBe(true);
+        const content = readFileSync(file.path, 'utf-8');
+        expect(content).toBe(file.content);
       }
     });
 
     it('creates directories recursively', () => {
       const root = makeTempDir();
-      const commands = generateSlashCommands('copilot', root, 'my_app');
-      writeSlashCommands(commands);
+      const files = generatePromptFile('copilot', root, 'my_app');
+      writePromptFiles(files);
       expect(existsSync(join(root, '.github', 'prompts'))).toBe(true);
+    });
+  });
+
+  describe('legacy aliases', () => {
+    it('generateSlashCommands is an alias for generatePromptFile', () => {
+      expect(generateSlashCommands).toBe(generatePromptFile);
+    });
+
+    it('writeSlashCommands is an alias for writePromptFiles', () => {
+      expect(writeSlashCommands).toBe(writePromptFiles);
+    });
+
+    it('SlashCommandFile type is compatible with PromptFile', () => {
+      const file: SlashCommandFile = { path: '/test', content: 'test' };
+      const prompt: PromptFile = file;
+      expect(prompt.path).toBe('/test');
     });
   });
 
   describe('detectAgent', () => {
     it('detects copilot from .github/prompts/prodara.prompt.md', () => {
       const root = makeTempDir();
-      const commands = generateSlashCommands('copilot', root, 'my_app');
-      writeSlashCommands(commands);
+      const files = generatePromptFile('copilot', root, 'my_app');
+      writePromptFiles(files);
       expect(detectAgent(root)).toBe('copilot');
     });
 
     it('detects claude from .claude/commands/prodara.md', () => {
       const root = makeTempDir();
-      const commands = generateSlashCommands('claude', root, 'my_app');
-      writeSlashCommands(commands);
+      const files = generatePromptFile('claude', root, 'my_app');
+      writePromptFiles(files);
       expect(detectAgent(root)).toBe('claude');
     });
 
     it('detects cursor from .cursor/rules/prodara.mdc', () => {
       const root = makeTempDir();
-      const commands = generateSlashCommands('cursor', root, 'my_app');
-      writeSlashCommands(commands);
+      const files = generatePromptFile('cursor', root, 'my_app');
+      writePromptFiles(files);
       expect(detectAgent(root)).toBe('cursor');
     });
 

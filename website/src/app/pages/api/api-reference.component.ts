@@ -121,19 +121,19 @@ export class ApiReferenceComponent {
       ],
     },
     {
-      title: 'Agent & Slash Commands',
-      desc: 'AI agent integration and slash command generation.',
+      title: 'Agent & Prompt Generation',
+      desc: 'AI agent integration and prompt file generation.',
       items: [
-        { name: 'PHASE_RENDERERS', desc: 'Map of 18 template IDs to render functions for slash command generation.' },
-        { name: 'renderTemplate()', desc: 'Render a single slash command template for a specific agent.' },
-        { name: 'renderAllTemplates()', desc: 'Generate all 29 slash commands for a target agent platform.' },
+        { name: 'PHASE_RENDERERS', desc: 'Map of 18 template IDs to render functions for prompt generation.' },
+        { name: 'renderTemplate()', desc: 'Render a prompt template for a specific agent.' },
+        { name: 'renderAllTemplates()', desc: 'Generate the complete prompt content for a target agent platform.' },
         { name: 'AgentPlatform', desc: 'Union type of all 26 supported AI agent platforms.' },
         { name: 'PhaseId', desc: 'Union type of all template phase identifiers.' },
       ],
     },
     {
       title: 'Templates',
-      desc: 'Slash command template system.',
+      desc: 'Prompt template system.',
       items: [
         { name: 'TemplateContext', desc: 'Context object passed to template renderers.' },
         { name: 'BuildContext', desc: 'Context for the build command template.' },

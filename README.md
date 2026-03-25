@@ -2,7 +2,7 @@
   <a href="https://www.prodara.net" target="blank"><img src="assets/logo/logo-vertical.png" width="320" alt="Prodara Logo" /></a>
 </p>
 
-<p align="center">The AI-native product engineering system.<br/>Run <code>prodara init</code>, open in VS Code, and let your AI agent build the rest.</p>
+<p align="center">Give your AI a compiler, not a pile of markdown.<br/>Prodara compiles <code>.prd</code> specs into a typed Product Graph. Change a spec and the compiler tells your agent exactly what's impacted.</p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@prodara/cli"><img src="https://img.shields.io/npm/v/@prodara/cli.svg" alt="NPM Version" /></a>
@@ -15,16 +15,14 @@
 
 ## What Is Prodara?
 
-Prodara is a **local-first, AI-native product engineering system**. You describe your product in `.prd` specification files — entities, workflows, surfaces, governance, security — and the Prodara compiler turns that specification into a **validated Product Graph**: a deterministic, machine-readable blueprint that any AI agent can consume.
+Prodara is a **compiler for product specifications**. You write `.prd` files that describe your product — entities, workflows, screens, permissions, governance — and the compiler validates them through a 13-phase pipeline. When a spec changes, semantic diffing tells your AI agent exactly what's impacted, so it builds from a verified plan instead of scanning your entire codebase.
 
-**The primary workflow**: Run `prodara init` to scaffold a project with agent prompts, slash commands, and copilot-instructions. Then open the project in VS Code and let your AI agent handle the build — validation, compilation, and implementation are all driven by the generated prompts.
+Under the hood, Prodara uses a structured specification language (`.prd` files) as an intermediate representation. The AI generates these specs from your description, the compiler validates them through a 13-phase pipeline, and the resulting Product Graph drives structured, incremental code generation.
 
-**For product teams**: Write what your product should do in structured plain text. The compiler catches inconsistencies, missing rules, and broken relationships before any code is written.
-
-**For AI agents**: Get a reproducible JSON graph with 42 edge types, incremental plans, and deterministic builds. No hallucination of requirements — the spec is the single source of truth.
+**One command does it all**:
 
 ```
-prodara init → AI agent uses generated prompts → Compiler validates → Agent implements
+prodara init → /prodara "Build a SaaS billing system" → production-ready code
 ```
 
 ## Quick Start
@@ -33,33 +31,54 @@ prodara init → AI agent uses generated prompts → Compiler validates → Agen
 # Install the global CLI
 npm install -g @prodara/cli
 
-# Create a project (auto-installs compiler + generates agent prompts)
-prodara init my-product --template saas
+# Initialize a project (auto-installs compiler + generates AI agent prompt)
+prodara init my-product
 cd my-product
 
-# Open in VS Code — agent prompts and slash commands are ready
+# Open in VS Code and use the /prodara command:
 code .
 
-# Your AI agent builds using the generated prompts:
-#   @prodara in Copilot Chat — just describe what you want
-#   or run directly:
-prodara build
-prodara build --dry-run    # Preview implementation tasks without executing
+# In your AI agent's chat, type:
+#   /prodara Build a task management app with teams, projects, and real-time updates
 
-# Or run individual phases
-prodara validate          # Type-check .prd files
-prodara graph -o graph.json  # Emit Product Graph
-prodara plan              # Generate incremental plan
-prodara test              # Run spec tests
-prodara diff              # Show semantic changes
+# Or run the build pipeline directly:
+prodara build
 ```
 
-> `prodara init` automatically runs `npm init` (if needed), installs `@prodara/compiler` as a dev dependency, and generates `.github/prompts/`, `.github/copilot-instructions.md`, and agent-specific slash commands. Use `--skip-install` to skip npm setup, or `--ai <agent>` to target a specific AI platform.
+> `prodara init` runs `npm init` (if needed), installs `@prodara/compiler` as a dev dependency, and generates the AI agent prompt file. Use `--ai <agent>` to target a specific platform (copilot, claude, cursor, gemini, and 22 more).
+
+## How It Works
+
+```
+You describe what you want
+        │
+        ▼
+┌──────────────────┐
+│  /prodara command │  Your AI agent (Copilot, Claude, Cursor, etc.)
+└──────────────────┘
+        │
+        ▼
+┌──────────────────┐  Phase 1: Clarify ambiguities (only pause point)
+│   Clarify        │  Phase 2: Generate .prd specification files
+│   Specify        │  Phase 3: Validate specs (prodara validate + multi-perspective review)
+│   Build          │  Phase 4: Compile → Product Graph → Implementation Plan
+│   Govern         │  Phase 5: Generate governance files (agents.md)
+│   Implement      │  Phase 6: Write production code (every file, every function)
+│   Review         │  Phase 7: Multi-perspective review + auto-fix loop
+│   Deliver        │  Phase 8: Final validation + summary
+└──────────────────┘
+        │
+        ▼
+  Production-ready application
+```
+
+The AI agent executes all 8 phases autonomously. It only pauses to ask clarification questions when genuinely ambiguous — everything else runs end-to-end without user intervention.
 
 ## Table of Contents
 
 - [What Is Prodara?](#what-is-prodara)
 - [Quick Start](#quick-start)
+- [How It Works](#how-it-works)
 - [Features](#features)
 - [The .prd Language](#the-prd-language)
 - [Compilation Pipeline](#compilation-pipeline)
@@ -78,41 +97,41 @@ prodara diff              # Show semantic changes
 
 ## Features
 
+### End-to-End AI Orchestration
+- **Single command** — `/prodara <description>` drives the entire lifecycle
+- **8-phase workflow** — Clarify → Specify → Validate → Build → Govern → Implement → Review → Deliver
+- **26 supported AI platforms** — Copilot, Claude, Cursor, Gemini, Windsurf, Codex, Kiro, Jules, Amp, Roo, Aider, Cline, Continue, Zed, Bolt, Aide, Trae, Augment, Sourcegraph, TabNine, Supermaven, Void, PearAI, Double, OpenCode, and a generic adapter
+- **Autonomous execution** — Only pauses for genuinely ambiguous clarifications
+- **Multi-perspective review** — Architecture, security, code quality, test quality, UX, and spec compliance reviewers with auto-fix loop
+
 ### Specification Language
 - **31 declaration types** — entity, workflow, surface, action, event, rule, actor, capability, enum, value object, integration, transport, storage, and more
 - **Constitution & governance** — Encode security policies, privacy rules, and architectural constraints at the spec level
 - **Specification tests** — Validate transitions, authorization, and invariants directly in `.prd` files
+- **AI-generated** — Users describe in natural language; the AI translates to `.prd` files
 
 ### Compiler
 - **13-phase compilation pipeline** — Lexer → Parser → Binder → Checker → Validator → Graph Builder → Graph Validator → Registry → Differ → Impact Propagation → Planner → Incremental Spec → Test Runner
-- **Product Graph** — Typed nodes and 42 edge types capturing every relationship in your product
+- **Product Graph** — Typed nodes and 42 edge types capturing every relationship in your product (used internally for planning and compliance)
 - **Semantic diffing** — Classifies changes as structural, behavioral, or policy; propagates impact across the graph
 - **900+ diagnostic codes** across 16 categories with source locations and suggested fixes
 - **Deterministic builds** — Same input always produces the same SHA-256–hashed graph
 
-### Workflow Engine
-- **6 deterministic phases** — Specify → Clarify → Plan → Tasks → Analyze → Implement
-- **9 built-in reviewer agents** — Architecture, Security, Code Quality, Test Quality, UX, Specification, Adversarial, Edge Case, and Quality reviewers
-- **Review/fix loop** — Iterative review cycles with configurable severity thresholds
-- **Party Mode** — Multi-agent consensus review with architect, security, developer, QA, and UX roles
-
-### AI Agent Integration
-- **26 supported AI platforms** — Copilot, Claude, Cursor, Gemini, Windsurf, Codex, Kiro, Jules, Amp, Roo, Aider, Cline, Continue, Zed, Bolt, Aide, Trae, Augment, Sourcegraph, TabNine, Supermaven, Void, PearAI, Double, OpenCode, and a generic adapter
-- **29 slash commands** — Build, validate, specify, plan, implement, review, explore, party, add-entity, add-workflow, explain, and more
-- **Machine-readable output** — Every command supports `--format json` for structured AI consumption
-- **Headless API driver** — No UI required; agents drive builds via CLI or programmatic API
-- **Dry-run mode** — Preview implementation tasks without executing them (`--dry-run`)
-- **Validate-after-implement** — Automatic retry loop in headless mode if validation fails
+### Review System
+- **9 built-in reviewer agents** — Architecture, Quality, Code Quality, Specification, UX, Security, Test Quality, Adversarial, and Edge Case reviewers
+- **Review/fix loop** — Iterative review cycles with configurable severity thresholds (max 6 loops)
+- **Custom reviewers** — Add custom reviewer prompts in `.prodara/reviewers/*.md`
+- **Governance** — Auto-generated `agents.md` files enforce coding standards derived from the specification
 
 ### Tooling
 - **VS Code extension** — Syntax highlighting, diagnostics, completions, hover, go-to-definition, find references, graph visualizer
 - **Language Server (LSP)** — Full LSP implementation with incremental text sync and cross-file semantic analysis
-- **Change proposals** — Isolated propose → validate → apply → archive workflow for safe spec changes
-- **Extension system** — Install custom reviewers, generators, and validators via npm
+- **Machine-readable output** — Every command supports `--format json` for structured consumption
+- **Headless API driver** — No UI required; agents drive builds via CLI or programmatic API
 
 ## The .prd Language
 
-Prodara specifications are written in `.prd` files using a structured, human-readable syntax:
+The AI generates `.prd` specification files from your natural language description. These files use a structured, human-readable syntax:
 
 ```
 module billing {
@@ -209,118 +228,84 @@ module billing {
 | **Differ** | Classifies changes (added, removed, structural, behavioral, policy) and propagates impact |
 | **Planner** | Produces tasks: generate, regenerate, remove, or verify per impacted node |
 | **Incremental Spec** | Enriches plan with node metadata and produces 6 category slices |
-| **Workflow Engine** | Runs 6 deterministic phases with topological task ordering |
-| **Review/Fix Loop** | Up to 9 reviewer agents with iterative fix cycles |
+| **Workflow Engine** | Runs deterministic phases with topological task ordering |
+| **Review/Fix Loop** | Up to 8 reviewer agents with iterative fix cycles |
 | **Verification** | Final gate: graph integrity, task coverage, review acceptance |
 
 ## CLI Commands
 
-### Build & Compilation
+### Core
 
 ```bash
-prodara build [path]       # Full pipeline (default command)
-prodara validate [path]    # Parse + type-check only
-prodara graph [path]       # Emit Product Graph
-prodara plan [path]        # Generate incremental plan
-prodara diff [path]        # Semantic diff (--semantic for enriched view)
-prodara test [path]        # Run spec tests
-prodara review [path]      # Run reviewer pipeline
-prodara watch [path]       # Watch mode — recompile on change
-```
-
-### Project Management
-
-```bash
-prodara init [name]                # Scaffold project (auto-installs compiler)
-prodara init --template saas       # Use a starter template
-prodara init --skip-install        # Skip npm init and compiler installation
-prodara init --ai copilot          # Generate slash commands for an AI agent
-prodara upgrade                    # Update project to latest version
-prodara upgrade --ai copilot       # Upgrade and regenerate slash commands
-prodara propose "Add payments"     # Create change proposal
-prodara changes                    # List active proposals
-prodara apply <proposal>           # Apply proposal after validation
-prodara archive <proposal>         # Archive completed proposal
+prodara build [path]       # Full pipeline: compile → workflow → review → verify (default command)
+prodara init [path]        # Scaffold a new project and generate AI agent prompt
+prodara upgrade [path]     # Update project to latest version
+prodara validate [path]    # Parse and type-check .prd files
+prodara test [path]        # Run spec-level tests
 ```
 
 ### Analysis & Inspection
 
 ```bash
+prodara graph [path]       # Emit Product Graph
+prodara plan [path]        # Generate incremental plan
+prodara diff [path]        # Semantic diff since last build
+prodara drift [path]       # Detect spec drift
+prodara analyze [path]     # Cross-spec consistency analysis
 prodara doctor             # Installation & workspace health check
 prodara dashboard [path]   # Project overview with aggregate stats
-prodara drift [path]       # Detect spec drift since last build
-prodara analyze [path]     # Cross-spec consistency analysis (--threshold)
 prodara checklist [path]   # Quality validation checklist
 prodara explain <node>     # Explain a node in the Product Graph
 prodara why <code>         # Explain a diagnostic code
-prodara clarify [path]     # Run clarify phase (--auto for auto-resolution)
-prodara onboard [path]     # Generate guided project walkthrough
-prodara history            # Browse past build runs (--last, --status)
-prodara docs [path]        # Generate markdown documentation
 ```
 
-### Extensions & Presets
+### Change Management
 
 ```bash
-prodara extension list              # List installed extensions
-prodara extension add <name>        # Install extension from npm
-prodara extension remove <name>     # Remove extension
-prodara preset list                 # List installed presets
-prodara preset add <name>           # Install preset
-prodara preset remove <name>        # Remove preset
+prodara propose "Description"    # Create change proposal
+prodara changes                  # List active proposals
+prodara apply <proposal>         # Apply proposal after validation
+prodara archive <proposal>       # Archive completed proposal
 ```
 
 > All commands support `--format json` for machine-readable output. Exit code `0` = success, `1` = errors.
 
 ## AI Agent Integration
 
-Prodara is built for AI agents. The `prodara init` command generates everything your agent needs:
-
-- **Agent prompt** (`.github/prompts/prodara.prompt.md`) — type `@prodara` and describe what you want
-- **Copilot instructions** (`.github/copilot-instructions.md`) — project-level context for Copilot
-- **29 slash commands** — Build, validate, plan, implement, review, explore, and more
-
-This is the recommended workflow — your AI agent drives the entire build process:
+Prodara generates a single prompt file for your AI agent during `prodara init`. This prompt orchestrates the entire build lifecycle:
 
 ```bash
-# Initialize with agent support (Copilot is the default)
-prodara init my-product --template saas
-
-# Or target a specific AI platform
-prodara init --ai claude       # Anthropic Claude
-prodara init --ai cursor       # Cursor IDE
-prodara init --ai gemini       # Google Gemini
-prodara init --ai windsurf     # Windsurf IDE
-# ... and 21 more platforms
+# Initialize with agent support
+prodara init my-product --ai copilot    # GitHub Copilot
+prodara init my-product --ai claude     # Anthropic Claude
+prodara init my-product --ai cursor     # Cursor IDE
+prodara init my-product --ai gemini     # Google Gemini
+# ... and 22 more platforms
 ```
 
-Once initialized, open the project in VS Code and build via agent:
+Once initialized, open the project in your IDE and use the `/prodara` command:
 
-### 29 Slash Commands
+```
+/prodara Build a task management app with teams, projects, and Kanban boards
+```
 
-AI agents get 29 commands organized by workflow:
+The AI agent handles everything:
+1. **Clarifies** ambiguities (only pause point)
+2. **Generates** `.prd` specification files from your description
+3. **Validates** specs with `prodara validate` + multi-perspective review
+4. **Builds** via `prodara build` — compiles specs and generates implementation plan
+5. **Creates governance** files (`agents.md`) for coding standards
+6. **Implements** every file — backend, frontend, database, tests, configs
+7. **Reviews** code from 6+ perspectives with auto-fix loop
+8. **Delivers** validated, production-ready application
 
-| Category | Commands |
-|----------|----------|
-| **Workflow** | `/build`, `/validate`, `/constitution`, `/specify`, `/plan`, `/implement`, `/clarify`, `/review`, `/propose`, `/explore`, `/party` |
-| **Editing** | `/add-module`, `/add-entity`, `/add-workflow`, `/add-screen`, `/add-policy`, `/rename`, `/move` |
-| **Query** | `/explain`, `/why`, `/graph`, `/diff`, `/drift`, `/analyze`, `/checklist` |
-| **Management** | `/help`, `/onboard`, `/extensions`, `/presets` |
+### Design Principles
 
-### Design Principles for Agents
-
-- **Agent-first** — `prodara init` generates prompts, skills, and slash commands; the agent drives the build
+- **One command** — `/prodara` is the only command users need
 - **Deterministic** — Same `.prd` input always produces the same graph output
-- **Machine-readable** — JSON output for every command, structured diagnostics
-- **No interactive input** — Fully headless; agents drive via CLI or API
-- **Stable exit codes** — `0` success, `1` errors; diagnostics on stderr, data on stdout
-
-> The CLI is also available directly for CI/CD pipelines and automation:
-> ```bash
-> prodara build --format json ./my-project
-> prodara graph --format json ./my-project    # → Product Graph JSON
-> prodara plan --format json ./my-project     # → Incremental plan JSON
-> ```
+- **Machine-readable** — JSON output for every CLI command
+- **Fully autonomous** — No interactive input; agents drive via CLI
+- **Governance-aware** — Respects `agents.md` policy files throughout execution
 
 See [docs/agent-integration.md](docs/agent-integration.md) for the full orchestration contract.
 
@@ -336,7 +321,6 @@ The `prodara-vscode` extension provides a first-class editing experience:
 - **Find references** — Locate all usages across files
 - **Document outline** — Navigate by module, entity, workflow, surface
 - **Graph visualizer** — Interactive Product Graph visualization
-- **8 commands** — Build, Validate, Show Graph, Show Plan, Drift, Diff, Explain, Graph Visualizer
 
 Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=prodara.prodara-vscode) or search "Prodara" in extensions.
 
@@ -374,18 +358,10 @@ if (result.diagnostics.hasErrors) {
   process.exit(1);
 }
 
-// Serialize the graph
-const graphJson = serializeGraph(result.graph!);
-
-// Category-based graph slicing for generators
-const slices = sliceAllCategories(result.graph!);
-
-// Run the workflow engine
+// Run the full build pipeline
 const config = loadConfig('./my-project');
 const spec = buildIncrementalSpec(result.plan!, result.graph!);
 const workflow = runWorkflow(result.graph!, spec, config.config);
-
-// Review and verify
 const review = runReviewFixLoop(DEFAULT_REVIEWERS, config, result.graph!, spec, 3);
 const verification = verify(result.graph!, spec, workflow, review.cycles);
 ```
@@ -398,10 +374,10 @@ This repository is an [npm workspaces](https://docs.npmjs.com/cli/using-npm/work
 |---------|-------------|
 | [`@prodara/compiler`](packages/compiler/) | Compiler, workflow engine, reviewer agents, CLI, and programmatic API |
 | [`@prodara/cli`](packages/cli/) | Global CLI wrapper — resolves project-local compiler and delegates |
-| [`@prodara/templates`](packages/templates/) | Prompt templates for 6 workflow phases, 9 reviewers, 26 AI platforms |
+| [`@prodara/templates`](packages/templates/) | Prompt templates for workflow phases, reviewers, and 26 AI platforms |
 | [`@prodara/lsp`](packages/lsp/) | Language Server Protocol — diagnostics, completions, hover, definitions, references |
 | [`@prodara/specification`](packages/specification/) | Language spec, examples, model docs, registry definitions |
-| [`prodara-vscode`](packages/vscode/) | VS Code extension with TextMate grammar, LSP client, and 8 commands |
+| [`prodara-vscode`](packages/vscode/) | VS Code extension with TextMate grammar, LSP client, and graph visualizer |
 
 ## Configuration
 
@@ -418,10 +394,6 @@ All settings are optional — sensible defaults are built in.
     "fixSeverity": ["critical", "error"],
     "parallel": true
   },
-  "preReview": {
-    "enabled": false,
-    "maxIterations": 2
-  },
   "reviewers": {
     "architecture": { "enabled": true },
     "security": { "enabled": true },
@@ -437,37 +409,17 @@ All settings are optional — sensible defaults are built in.
     "build": "npm run build"
   },
   "agent": { "provider": "openai", "defaultModel": "gpt-4", "maxImplementRetries": 1 },
-  "audit": { "enabled": true },
-  "constitution": { "path": "./constitution.prd" },
-  "workflows": {
-    "quick": { "phases": ["specify", "plan", "implement"] }
-  }
+  "audit": { "enabled": true }
 }
 ```
 
 ## Testing
 
-The test suite covers every subsystem:
-
 | Metric | Value |
 |--------|-------|
-| **Total tests** | 1,689+ across 50 test files |
+| **Total tests** | 1,800+ across 50+ test files |
 | **Coverage** | 100% lines, branches, functions, statements |
-| **Packages tested** | compiler, lsp, templates |
-
-### Test Categories
-
-| Category | Files | What's Tested |
-|----------|-------|---------------|
-| **Compiler core** | lexer, parser, binder, checker | Tokenization, AST construction, symbol resolution, type analysis |
-| **Graph** | graph, graph-validator, planner | Product Graph construction, 42 edge types, diffing, impact propagation |
-| **Engine** | workflow, reviewers, verification | 6 phases, 9 reviewers, review/fix loop, integrity checks |
-| **CLI** | cli, pipeline, orchestrator | All 41 commands, build orchestration, AI implementation, summary formatting |
-| **Features** | incremental, proposals, drift, checklist, analyze | Incremental spec, change proposals, drift detection, quality analysis |
-| **Infrastructure** | config, discovery, build-state, registry | Configuration, file discovery, state persistence, presets |
-| **Integration** | integration, runtime, agent | End-to-end fixture-based compilation, environment resolution |
-| **LSP** | lsp, semantic | Diagnostics, completions, hover, definitions, references |
-| **Templates** | templates | All phase templates, reviewer perspectives, 26 platform adapters |
+| **Packages tested** | compiler, cli, lsp, templates |
 
 ### TypeScript Strictness
 
@@ -479,7 +431,6 @@ The test suite covers every subsystem:
   "noImplicitReturns": true,
   "noFallthroughCasesInSwitch": true,
   "noPropertyAccessFromIndexSignature": true
-  // Zero `any` types in source
 }
 ```
 
@@ -500,8 +451,7 @@ npm run clean           # Remove dist/ directories
 prodara/
 ├── .github/
 │   ├── copilot-instructions.md  # Project-level agent instructions
-│   ├── prompts/                 # Agent prompt files (.prompt.md)
-│   └── workflows/               # CI/CD (deploy, test)
+│   └── prompts/                 # Agent prompt files (.prompt.md)
 ├── packages/
 │   ├── compiler/          # @prodara/compiler — core compiler + CLI + API
 │   │   ├── src/
@@ -511,12 +461,12 @@ prodara/
 │   │   │   ├── checker/   # Type checking + semantic validation
 │   │   │   ├── graph/     # Product Graph builder + validator
 │   │   │   ├── planner/   # Differ + impact propagation + planner
-│   │   │   ├── workflow/  # 6-phase workflow engine
+│   │   │   ├── workflow/  # Workflow engine
 │   │   │   ├── reviewers/ # 9 built-in reviewer agents
 │   │   │   ├── implement/ # AI-driven code generation
-│   │   │   ├── cli/       # Commander-based CLI (41 commands)
+│   │   │   ├── cli/       # Commander-based CLI
 │   │   │   └── ...        # incremental, verification, audit, config, ...
-│   │   └── test/          # 47 test suites
+│   │   └── test/          # 48 test suites
 │   ├── cli/               # @prodara/cli — global wrapper
 │   ├── templates/         # @prodara/templates — prompts for phases + reviewers
 │   ├── lsp/               # @prodara/lsp — Language Server Protocol
@@ -554,4 +504,4 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
 ## License
 
-[Apache](LICENSE)
+[Apache 2.0](LICENSE)

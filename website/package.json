@@ -10,6 +10,7 @@
     "serve:ssr:website": "node dist/website/server/server.mjs"
   },
   "private": true,
+  "license": "Apache-2.0",
   "packageManager": "npm@11.6.2",
   "dependencies": {
     "@angular/common": "^21.2.0",

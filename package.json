@@ -2,7 +2,7 @@
   "name": "prodara",
   "private": true,
   "version": "0.1.0",
-  "description": "Prodara — a spec-first language for building software products",
+  "description": "Prodara — give your AI a compiler, not a pile of markdown",
   "workspaces": [
     "packages/specification",
     "packages/templates",
@@ -18,7 +18,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "Prodara Contributors",
   "repository": {
     "type": "git",

@@ -11,7 +11,7 @@ import { CalloutComponent } from '../../../components/callout.component';
       <p class="mt-4 text-lg leading-relaxed text-surface-600">
         Prodara provides five interactive modes that your AI agent uses to investigate,
         explain, discuss, design, and onboard. Each mode is triggered via a
-        <a routerLink="/docs/slash-commands" class="text-primary-600 hover:underline">slash command</a>
+        <a routerLink="/docs/slash-commands" class="text-primary-600 hover:underline">AI prompt</a>
         and produces structured context that the agent weaves into its response.
       </p>
 
@@ -66,7 +66,7 @@ import { CalloutComponent } from '../../../components/callout.component';
       </p>
       <app-callout variant="tip">
         Party mode is great for design decisions. Run
-        <code>/prodara:party "should we split billing into its own module?"</code>
+        <code>/prodara party "should we split billing into its own module?"</code>
         and get feedback from all reviewer perspectives at once.
       </app-callout>
 
@@ -100,10 +100,10 @@ import { CalloutComponent } from '../../../components/callout.component';
 
       <h2 class="mt-12 text-2xl font-bold text-surface-950">Triggering Interactive Modes</h2>
       <p class="mt-2 text-surface-600">
-        All interactive modes are invoked via
-        <a routerLink="/docs/slash-commands" class="text-primary-600 hover:underline">slash commands</a>
-        that are generated when you run <code>prodara init --ai &lt;agent&gt;</code>.
-        The agent reads the command template, gathers context from the compiler, and
+        All interactive modes are invoked via the
+        <a routerLink="/docs/slash-commands" class="text-primary-600 hover:underline">AI prompt file</a>
+        that is generated when you run <code>prodara init --ai &lt;agent&gt;</code>.
+        The agent reads the prompt, gathers context from the compiler, and
         presents the results in natural language.
       </p>
 
@@ -120,10 +120,10 @@ import { CalloutComponent } from '../../../components/callout.component';
 })
 export class InteractiveModesComponent {
   readonly modes = [
-    { icon: '🔍', name: 'Explore', command: '/prodara:explore <topic>', short: 'Read-only investigation of a topic in the product graph.' },
-    { icon: '💡', name: 'Help', command: '/prodara:help', short: 'Contextual guidance based on current project state.' },
-    { icon: '🎉', name: 'Party', command: '/prodara:party <topic>', short: 'Multi-perspective discussion from all reviewer agents.' },
-    { icon: '📐', name: 'Design', command: '/prodara:design <feature>', short: 'Structured design document for a proposed feature.' },
-    { icon: '👋', name: 'Onboard', command: '/prodara:onboard', short: 'Interactive project walkthrough for new team members.' },
+    { icon: '🔍', name: 'Explore', command: '/prodara explore <topic>', short: 'Read-only investigation of a topic in the product graph.' },
+    { icon: '💡', name: 'Help', command: '/prodara help', short: 'Contextual guidance based on current project state.' },
+    { icon: '🎉', name: 'Party', command: '/prodara party <topic>', short: 'Multi-perspective discussion from all reviewer agents.' },
+    { icon: '📐', name: 'Design', command: '/prodara design <feature>', short: 'Structured design document for a proposed feature.' },
+    { icon: '👋', name: 'Onboard', command: '/prodara onboard', short: 'Interactive project walkthrough for new team members.' },
   ];
 }

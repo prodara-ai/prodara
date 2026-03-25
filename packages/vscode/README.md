@@ -35,4 +35,4 @@ npx @vscode/vsce package
 
 ## License
 
-MIT
+Apache-2.0

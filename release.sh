@@ -30,7 +30,18 @@ for pkg in "${PACKAGES[@]}"; do
   npm --no-git-tag-version version "$SEMVER" --prefix "$pkg"
 done
 
-git add "${PACKAGES[@]/%//package.json}"
+# Update root package.json
+echo "Setting root package.json to version $SEMVER"
+npm --no-git-tag-version version "$SEMVER"
+
+# Update version badge on the website home page
+HOMEPAGE="website/src/app/pages/home/home.component.ts"
+if [[ -f "$HOMEPAGE" ]]; then
+  echo "Updating website version badge to $VERSION"
+  sed -i '' "s/v[0-9]\{1,\}\.[0-9]\{1,\}\(\.[0-9]\{1,\}\)\{0,1\} - First Public Release/$VERSION/" "$HOMEPAGE"
+fi
+
+git add "${PACKAGES[@]/%//package.json}" package.json "$HOMEPAGE"
 git commit -m "Release version $VERSION"
 git tag "$VERSION"
 

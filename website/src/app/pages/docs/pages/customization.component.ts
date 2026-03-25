@@ -10,7 +10,7 @@ import { CalloutComponent } from '../../../components/callout.component';
     <article class="prose max-w-none">
       <h1 class="text-3xl font-bold tracking-tight text-surface-950">Reviewers &amp; Constitution</h1>
       <p class="mt-4 text-lg leading-relaxed text-surface-600">
-        Prodara includes 7 built-in reviewers, supports custom reviewers loaded from Markdown files,
+        Prodara includes 9 built-in reviewers (7 configurable, 2 always-on), supports custom reviewers loaded from Markdown files,
         and provides a project-level constitution that governs all AI interactions. You can also
         override any template and define per-artifact rules.
       </p>
@@ -107,7 +107,7 @@ import { CalloutComponent } from '../../../components/callout.component';
       <h2 class="mt-12 text-2xl font-bold text-surface-950">Next Steps</h2>
       <p class="text-surface-600">
         Learn about
-        <a routerLink="/docs/slash-commands" class="text-primary-600 hover:underline">slash commands</a>
+        <a routerLink="/docs/slash-commands" class="text-primary-600 hover:underline">AI prompt file</a>
         that trigger reviewers, or explore
         <a routerLink="/docs/extensions" class="text-primary-600 hover:underline">extensions</a>
         to add custom reviewer capabilities.

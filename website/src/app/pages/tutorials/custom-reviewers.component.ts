@@ -78,7 +78,7 @@ import { CalloutComponent } from '../../components/callout.component';
         </p>
         <app-code-block [code]="constitution" language="json" filename="prodara.config.json" />
         <app-callout variant="tip">
-          The constitution is injected into the <code>/prodara:constitution</code> slash command.
+          The constitution is injected into the <code>/prodara</code> prompt automatically.
           Your AI agent reads it before generating any implementation.
         </app-callout>
       </section>

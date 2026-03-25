@@ -898,7 +898,7 @@ describe('upgrade command', () => {
       await runCommand(program, ['upgrade', tmpDir, '--skip-install', '--ai', 'copilot']);
       expect(mockGenerateSlashCommands).toHaveBeenCalledWith('copilot', expect.any(String), 'my_app', undefined);
       expect(mockWriteSlashCommands).toHaveBeenCalled();
-      expect(stdoutOutput).toContain('Regenerated slash commands');
+      expect(stdoutOutput).toContain('Regenerated prompt file');
       expect(process.exitCode).toBe(0);
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
@@ -918,7 +918,7 @@ describe('upgrade command', () => {
       expect(mockDetectAgent).toHaveBeenCalledWith(expect.any(String));
       expect(mockGenerateSlashCommands).toHaveBeenCalledWith('claude', expect.any(String), 'my_app', undefined);
       expect(mockWriteSlashCommands).toHaveBeenCalled();
-      expect(stdoutOutput).toContain('Regenerated slash commands for claude');
+      expect(stdoutOutput).toContain('Regenerated prompt file for claude');
       expect(process.exitCode).toBe(0);
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
@@ -2016,7 +2016,7 @@ describe('init command — AI agent', () => {
       mockGetAgentConfig.mockReturnValue({ commandsDir: '.copilot/commands' });
       const program = createProgram();
       await runCommand(program, ['init', tmpDir, '--name', 'test_app', '--ai', 'copilot']);
-      expect(stdoutOutput).toContain('Created slash commands');
+      expect(stdoutOutput).toContain('Created prompt file');
       expect(mockWriteSlashCommands).toHaveBeenCalled();
       expect(process.exitCode).toBe(0);
     } finally {
@@ -2073,7 +2073,7 @@ describe('init command — AI agent', () => {
       await runCommand(program, ['init', tmpDir, '--name', 'test_app', '--skip-install']);
       expect(mockSelect).toHaveBeenCalledWith(expect.objectContaining({ message: 'Which AI agent do you use?' }));
       expect(mockWriteSlashCommands).toHaveBeenCalled();
-      expect(stdoutOutput).toContain('Created slash commands');
+      expect(stdoutOutput).toContain('Created prompt file');
       expect(process.exitCode).toBe(0);
     } finally {
       mockIsInteractive.mockReturnValue(false);
@@ -2092,7 +2092,7 @@ describe('init command — AI agent', () => {
       const program = createProgram();
       await runCommand(program, ['init', tmpDir, '--name', 'test_app', '--skip-install']);
       expect(mockWriteSlashCommands).not.toHaveBeenCalled();
-      expect(stdoutOutput).not.toContain('Created slash commands');
+      expect(stdoutOutput).not.toContain('Created prompt file');
       expect(process.exitCode).toBe(0);
     } finally {
       mockIsInteractive.mockReturnValue(false);

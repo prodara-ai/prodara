@@ -42,10 +42,12 @@ prodara doctor
 2. Installs `@prodara/compiler` as a dev dependency
 3. Scaffolds the `.prd` project structure
 
+Use `--ai` to also generate a single AI agent prompt file for your platform (Copilot, Claude, Cursor, and 23 others). This gives you the `/prodara` command — one prompt that drives the full build-to-deploy lifecycle.
+
 Use `--skip-install` to skip the npm init and compiler installation steps.
 
 If no local compiler is found, the CLI prints installation instructions.
 
 ## License
 
-MIT
+Apache-2.0

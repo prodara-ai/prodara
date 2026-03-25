@@ -1,6 +1,6 @@
 # @prodara/compiler
 
-The core compilation engine, workflow orchestrator, and programmatic API for the Prodara spec-first language.
+The core compilation engine, workflow orchestrator, and programmatic API for the Prodara product engineering platform.
 
 ## Installation
 
@@ -19,14 +19,21 @@ The compiler takes `.prd` specification files through a 13-phase pipeline:
 3. **Diffing** → **Impact Propagation** → **Planning**
 4. **Incremental Spec** → **Workflow Engine** → **Review/Fix Loop** → **Verification**
 
+### How It Fits Together
+
+The primary way to use Prodara is through the `/prodara` command in your AI agent. `prodara init` generates a single prompt file that orchestrates the full lifecycle — the AI agent generates `.prd` specs from your description, the compiler validates and builds them, and the agent implements the resulting plan.
+
+The compiler powers the core CLI commands the agent calls:
+- `prodara validate` — parse and type-check `.prd` files
+- `prodara build` — full pipeline: compile → workflow → review → verify
+- `prodara test` — run spec-level tests
+
 ### Implementation Phase
 
-The primary way to build is through your AI agent — `prodara init` generates the
-`@prodara` agent prompt (`.github/prompts/prodara.prompt.md`), slash commands, and copilot-instructions that
-drive the full build pipeline. The agent uses `prodara build` under the hood. The implement phase:
+The build pipeline includes an AI-driven implementation phase:
 
 - Extracts implementation instructions from the workflow engine
-- Dispatches each task to an AI agent with a structured prompt containing task ID, action, node context, related edges, and product graph data
+- Dispatches each task to an AI agent with structured prompts containing task ID, action, node context, related edges, and product graph data
 - Supports two modes:
   - **Prompt files** (default) — Generates `.md` prompt files for IDE-based agents (Copilot, Claude, Cursor, etc.)
   - **Headless** (`--headless`) — Sends prompts directly via API to OpenAI, Anthropic, or other providers
@@ -60,30 +67,16 @@ Drop `.md` files in `.prodara/reviewers/` to create custom reviewer agents. The 
 ```typescript
 import { discoverCustomReviewers, loadReviewerPrompt } from '@prodara/compiler';
 
-// Discover all custom reviewers in .prodara/reviewers/
 const customs = await discoverCustomReviewers('/path/to/project');
-
-// Load a specific reviewer prompt
 const prompt = await loadReviewerPrompt(
   { promptPath: '.prodara/reviewers/performance.md' },
   '/path/to/project',
 );
 ```
 
-Alternatively, set `reviewers.{name}.promptPath` in `prodara.config.json` to point to any `.md` file.
-
 ### Constitution
 
 A project-level constitution provides global instructions injected into all AI prompts:
-
-```typescript
-import { loadConstitution } from '@prodara/compiler';
-
-// Loads from config.constitution.path or .prodara/constitution.md
-const text = await loadConstitution(resolvedConfig, '/path/to/project');
-```
-
-Configure in `prodara.config.json`:
 
 ```json
 {
@@ -105,22 +98,9 @@ Override any built-in template with a local `.md` file:
 }
 ```
 
-### Per-Artifact Rules
-
-Define rules that are injected into phase templates for specific artifact types:
-
-```json
-{
-  "artifactRules": {
-    "proposal": ["Must include acceptance criteria", "Max 200 words"],
-    "design": ["Include sequence diagrams"]
-  }
-}
-```
-
 ### Pre-Review Loop
 
-Run reviewers *before* implementation to catch spec-level issues early. Disabled by default:
+Run reviewers *before* implementation to catch spec-level issues early:
 
 ```json
 {
@@ -132,71 +112,13 @@ Run reviewers *before* implementation to catch spec-level issues early. Disabled
 }
 ```
 
-Skip at runtime with the `noPreReview` pipeline option. The `postReview` key is accepted as a backward-compatible alias for `reviewFix`.
-```
+## AI Agent Integration
 
-### Exploration, Help & Party Mode
+`prodara init --ai <agent>` generates a single prompt file for 26 supported AI agents. The prompt drives the full 8-phase lifecycle:
 
-Three interactive templates for AI agent collaboration:
+1. Clarify → 2. Specify → 3. Validate → 4. Build → 5. Govern → 6. Implement → 7. Review → 8. Deliver
 
-- **Explore** (`/prodara:explore <topic>`) — Read-only investigation of a topic within the product graph. Analyzes modules, entities, and relationships without modifying files.
-- **Help** (`/prodara:help`) — Contextual guidance based on project state. Detects .prd files, build artifacts, and provides recommendations.
-- **Party** (`/prodara:party <topic>`) — Multi-perspective discussion from configured reviewer agents. Each perspective provides analysis, followed by a synthesis.
-
-### Design Documents & Onboarding
-
-- **Design** (`/prodara:design <change>`) — Generates a per-change design document with technical approach, affected modules, predicted file changes, risk assessment, and architecture decisions.
-- **Onboard** (`/prodara:onboard`) — Interactive onboarding guide that detects project state (empty, basic, complete) and provides step-by-step guidance tailored to your current setup.
-
-## Slash Commands
-
-`prodara init --ai <agent>` generates slash command files for 26 supported AI agents. Commands are organized into four categories:
-
-| Category | Commands |
-|---|---|
-| **Workflow** | `build`, `validate`, `constitution`, `specify`, `plan`, `implement`, `clarify`, `review`, `propose`, `explore`, `party` |
-| **Spec-edit** | `add-module`, `add-entity`, `add-workflow`, `add-screen`, `add-policy`, `rename`, `move` |
-| **Query** | `explain`, `why`, `graph`, `diff`, `drift`, `analyze`, `checklist` |
-| **Management** | `help`, `onboard`, `extensions`, `presets` |
-
-29 commands are generated per agent, each adapted to the agent's file format (`.md`, `.prompt.md`, `.mdc`, etc.).
-
-### Extension Marketplace
-
-Search, install, and remove extensions and presets via npm:
-
-```typescript
-import { searchMarketplace, npmInstall, npmRemove } from '@prodara/compiler';
-
-// Search for extensions or presets
-const extensions = searchMarketplace('auth', 'extension');
-const presets    = searchMarketplace('saas', 'preset');
-
-// Install/remove
-npmInstall('prodara-extension-auth', process.cwd());
-npmRemove('prodara-extension-auth', process.cwd());
-```
-
-Convention: extensions are named `prodara-extension-{name}`, presets `prodara-preset-{name}`.
-
-### Custom Workflows
-
-Define named workflow schemas in `.prodara.yaml`:
-
-```yaml
-workflows:
-  default:
-    phases: [specify, clarify, plan, implement, review, verify]
-  fast:
-    phases: [plan, implement, verify]
-    reviewBefore: [security]
-  strict:
-    phases: [specify, clarify, plan, implement, review, verify]
-    reviewBefore: [architecture, security]
-    reviewAfter: [quality, testQuality]
-```
-
-Each workflow defines its phase sequence and optional `reviewBefore`/`reviewAfter` gates. The `default` workflow is used when none is specified.
+Each agent gets one file adapted to the platform's format (`.prompt.md` for Copilot, `.md` for Claude, `.mdc` for Cursor, etc.).
 
 ## CLI
 
@@ -204,26 +126,23 @@ When installed as a project dependency, provides a local `prodara` binary:
 
 ```bash
 npx prodara init                       # Scaffold project (auto-installs compiler)
-npx prodara init --skip-install        # Scaffold without npm setup
-npx prodara upgrade                    # Update existing project to latest version
-npx prodara upgrade --ai copilot       # Upgrade and regenerate slash commands
+npx prodara init --ai copilot          # Generate prompt file for an AI agent
+npx prodara upgrade                    # Update project to latest version
 npx prodara build                      # Full pipeline including AI implementation
 npx prodara build --headless           # Use API driver instead of prompt files
-npx prodara build --dry-run            # Preview implementation tasks without executing
-npx prodara build --no-implement       # Skip implementation phase
-npx prodara validate --format json
-npx prodara graph --output build/graph.json
-npx prodara test
+npx prodara build --dry-run            # Preview tasks without executing
+npx prodara validate --format json     # Parse and type-check .prd files
+npx prodara test                       # Run spec-level tests
 ```
 
 ## Testing
 
 ```bash
-npm test              # 1,457 tests
+npm test              # 1,500+ tests
 npm run test:coverage # Enforces 100% coverage
 npm run typecheck     # Zero errors
 ```
 
 ## License
 
-MIT
+Apache 2.0

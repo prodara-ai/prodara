@@ -164,9 +164,9 @@ export type { AuditRecord, AuditPhase, AuditPhaseStatus, AuditOutcome, AuditBloc
 export { buildImplementTasks, buildImplementPrompt, executeImplementation, extractSeams, applySeams } from './implement/implement.js';
 export type { ImplementTask, ImplementPrompt, ImplementPhaseResult, ImplementTaskResult, SeamRange, ImplementAction } from './implement/types.js';
 
-// Agent setup — slash command generation
-export { generateSlashCommands, writeSlashCommands, isValidAgentId, listSupportedAgents, getAgentConfig, SLASH_COMMAND_COUNT } from './cli/agent-setup.js';
-export type { AgentId, AgentCommandConfig, SlashCommandFile } from './cli/agent-setup.js';
+// Agent setup — prompt generation
+export { generatePromptFile, writePromptFiles, generateSlashCommands, writeSlashCommands, isValidAgentId, listSupportedAgents, getAgentConfig, buildPromptContent } from './cli/agent-setup.js';
+export type { AgentId, AgentCommandConfig, PromptFile, SlashCommandFile } from './cli/agent-setup.js';
 
 // Proposal system
 export { createProposal, listProposals, applyProposal, archiveProposal, getProposal, CHANGES_DIR, ARCHIVE_DIR } from './proposal/proposal.js';

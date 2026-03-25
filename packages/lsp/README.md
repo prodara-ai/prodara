@@ -38,4 +38,4 @@ npm run test:coverage # Enforces 100% coverage
 
 ## License
 
-MIT
+Apache-2.0

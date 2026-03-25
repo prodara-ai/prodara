@@ -5,7 +5,7 @@ This repository contains the **canonical specification for the Prodara language*
 
 Prodara is a **Git-native, AI-native, spec-first programming language for products**.
 
-Instead of writing large amounts of application code, developers define the product as a **structured specification**.
+Instead of writing large amounts of application code, developers describe the product as a **structured specification** — either by hand or by telling an AI agent what to build via a single `/prodara` command. The AI writes the `.prd` specification and generates production-ready code from it.
 
 The specification describes:
 

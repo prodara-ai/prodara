@@ -14,7 +14,7 @@
   "bugs": {
     "url": "https://github.com/prodara-ai/prodara/issues"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "engines": {
     "vscode": "^1.85.0"
   },

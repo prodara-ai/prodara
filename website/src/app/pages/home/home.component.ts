@@ -16,13 +16,11 @@ import { CodeBlockComponent } from '../../components/code-block.component';
             v0.1 - First Public Release
           </div>
           <h1 class="text-4xl font-extrabold tracking-tight text-surface-950 sm:text-5xl lg:text-6xl">
-            The AI-Native Product<br />
-            <span class="bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">Specification Ecosystem</span>
+            Give Your AI a Compiler,<br />
+            <span class="bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">Not a Pile of Markdown</span>
           </h1>
           <p class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-surface-600 sm:text-xl">
-            Describe your product in plain English-like specs. Your AI agent validates, compiles, and
-            implements everything — <strong class="text-surface-900">driven by agent prompts, slash commands,
-            and skills built into every Prodara project</strong>.
+            Prodara compiles <code class="rounded bg-surface-100 px-1.5 py-0.5 font-mono text-sm text-primary-700 dark:bg-surface-100 dark:text-primary-300">.prd</code> specs into a typed Product Graph. Change a spec and the compiler tells your agent exactly what's impacted — <strong class="text-surface-900">no &ldquo;hold on, let me scan your codebase.&rdquo;</strong>
           </p>
           <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
@@ -266,8 +264,8 @@ import { CodeBlockComponent } from '../../components/code-block.component';
         <h2 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">
           Ready to build specs that actually compile?
         </h2>
-        <p class="mt-4 text-lg text-primary-100">
-          Run <code class="rounded bg-white/20 px-2 py-0.5 text-sm font-mono">prodara init</code>, open the project in VS Code, and let your AI agent build the rest.
+        <p class="mt-4 text-lg text-white/80">
+          Run <code class="rounded bg-white/20 px-2 py-0.5 text-sm font-mono text-white">prodara init</code>, open the project in VS Code, and let your AI agent build the rest.
         </p>
         <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <a
@@ -412,7 +410,7 @@ module todo {
     {
       icon: '&#x1F916;',
       title: 'Agent-First Build System',
-      desc: 'Your AI agent is the primary builder. prodara init generates agent prompts, slash commands, and skills. 26+ agents supported — Copilot, Claude, Cursor, and more.',
+      desc: 'Your AI agent is the primary builder. prodara init generates a single AI prompt file. 26+ agents supported — Copilot, Claude, Cursor, and more.',
     },
   ];
 
@@ -428,7 +426,7 @@ module todo {
     {
       num: '1',
       title: 'Initialize Your Project',
-      desc: 'Run prodara init to scaffold a project with .prd spec files, agent prompts, and slash commands. The CLI auto-installs the compiler and generates everything your AI agent needs.',
+      desc: 'Run prodara init to scaffold a project with .prd spec files and a single AI prompt file. The CLI auto-installs the compiler and generates everything your AI agent needs.',
       cmd: 'prodara init my-app --template saas',
     },
     {
@@ -441,12 +439,12 @@ module todo {
       num: '3',
       title: 'Iterate & Ship',
       desc: 'Change the spec, ask your agent to rebuild, and see exactly what changed with semantic diffing. 9 built-in reviewers catch issues before they reach code.',
-      cmd: 'Use: /prodara:diff or /prodara:review',
+      cmd: '@prodara Add priorities to the task board',
     },
   ];
 
   readonly newUserReasons = [
-    { title: 'Your agent does the building', desc: 'Run prodara init, open in your IDE, and type @prodara followed by what you want. Your AI agent handles everything — you just describe the product.' },
+    { title: 'Your agent does the building', desc: 'Run prodara init, open in your IDE, and use the /prodara prompt. Your AI agent handles everything — you just describe the product.' },
     { title: 'Real compiler, real errors', desc: 'Not a linter on top of markdown - a full lexer/parser/binder/type-checker that catches mistakes before they reach code. 900+ stable error codes.' },
     { title: 'VS Code extension included', desc: 'Install the extension and get syntax highlighting, inline diagnostics, completions, go-to-definition, and hover info from day one.' },
     { title: 'Spec-native testing', desc: 'Write expect blocks right inside your spec. Test transitions, authorization, validation rules, and return types - directly against the Product Graph.' },

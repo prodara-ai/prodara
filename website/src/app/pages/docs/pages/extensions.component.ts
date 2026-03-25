@@ -65,9 +65,9 @@ import { CalloutComponent } from '../../../components/callout.component';
       <app-code-block [code]="marketplaceExample" language="typescript" />
 
       <app-callout variant="info">
-        Use the <code>/prodara:extensions</code> slash command to manage extensions
+        Use the <code>/prodara</code> prompt to manage extensions
         from within your AI agent. See
-        <a routerLink="/docs/slash-commands" class="underline">Slash Commands</a>.
+        <a routerLink="/docs/slash-commands" class="underline">AI Prompt File</a>.
       </app-callout>
 
       <!-- CLI commands -->
@@ -104,7 +104,7 @@ export class ExtensionsComponent {
     { kind: 'generator', desc: 'Adds a code generator that produces artifacts from the Product Graph.' },
     { kind: 'validator', desc: 'Adds custom validation rules executed during the graph validation phase.' },
     { kind: 'phase', desc: 'Adds a new compiler phase to the pipeline.' },
-    { kind: 'template', desc: 'Provides custom slash-command templates for agent integrations.' },
+    { kind: 'template', desc: 'Provides custom prompt templates for agent integrations.' },
   ];
 
   readonly manifestExample = `{

@@ -55,7 +55,7 @@ import { RouterLink } from '@angular/router';
             <span class="text-sm font-semibold text-surface-950">Prodara</span>
           </div>
           <p class="text-sm text-surface-400">
-            &copy; {{ year }} Prodara. Released under the MIT License.
+            &copy; {{ year }} Prodara. Released under the Apache-2.0 License.
           </p>
         </div>
       </div>

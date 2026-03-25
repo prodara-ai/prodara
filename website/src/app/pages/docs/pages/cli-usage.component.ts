@@ -66,9 +66,9 @@ import { CodeBlockComponent } from '../../../components/code-block.component';
 
       <h2 class="mt-10 text-2xl font-bold text-surface-950">Next Steps</h2>
       <p class="text-surface-600">
-        See the full list of
-        <a routerLink="/docs/slash-commands" class="text-primary-600 hover:underline">29 slash commands</a>
-        for AI agent workflows, or configure
+        See how the
+        <a routerLink="/docs/slash-commands" class="text-primary-600 hover:underline">AI prompt file</a>
+        drives agent workflows, or configure
         <a routerLink="/docs/workflows" class="text-primary-600 hover:underline">custom workflows</a>
         for your build pipeline.
       </p>
@@ -89,7 +89,7 @@ export class CliUsageComponent {
     },
     {
       name: 'upgrade',
-      desc: 'Update an existing Prodara project to the latest version. Adds missing config keys, creates new directories, updates the compiler, and regenerates slash commands.',
+      desc: 'Update an existing Prodara project to the latest version. Adds missing config keys, creates new directories, updates the compiler, and regenerates the AI prompt file.',
       example: 'prodara upgrade --ai copilot',
     },
     {
@@ -159,7 +159,7 @@ export class CliUsageComponent {
     },
     {
       name: 'init --ai <agent>',
-      desc: 'Generate slash command files for an AI agent. Supports 26+ agents including copilot, claude, cursor, windsurf, and more.',
+      desc: 'Generate an AI prompt file for your agent. Supports 26+ agents including copilot, claude, cursor, windsurf, and more.',
       example: 'prodara init --ai copilot',
     },
     {

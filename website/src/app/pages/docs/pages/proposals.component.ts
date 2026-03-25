@@ -18,7 +18,7 @@ import { CalloutComponent } from '../../../components/callout.component';
       <!-- Creating a Proposal -->
       <h2 class="mt-12 text-2xl font-bold text-surface-950">Creating a Proposal</h2>
       <p class="mt-2 text-surface-600">
-        Use the <code>/prodara:propose</code> slash command or the CLI to create a new proposal.
+        Use the <code>/prodara</code> prompt or the CLI to create a new proposal.
         Each proposal gets a timestamped directory with a <code>delta.prd</code> file for
         your specification changes and a <code>metadata.json</code> with status tracking.
       </p>
@@ -78,7 +78,7 @@ import { CalloutComponent } from '../../../components/callout.component';
 })
 export class ProposalsComponent {
   readonly lifecycle = [
-    { num: '1', status: 'draft', desc: 'Created with /prodara:propose. The delta.prd file is ready for editing.', color: 'bg-surface-100 text-surface-700' },
+    { num: '1', status: 'draft', desc: 'Created with prodara propose. The delta.prd file is ready for editing.', color: 'bg-surface-100 text-surface-700' },
     { num: '2', status: 'open', desc: 'Submitted for review. The compiler validates the delta against the current graph.', color: 'bg-primary-100 text-primary-700' },
     { num: '3', status: 'approved', desc: 'All reviewers have approved. Ready to apply.', color: 'bg-green-100 text-green-700' },
     { num: '4', status: 'applied', desc: 'The delta has been merged into the main specification.', color: 'bg-green-100 text-green-700' },
@@ -86,8 +86,8 @@ export class ProposalsComponent {
     { num: '6', status: 'archived', desc: 'Manually archived without applying. Preserved for reference.', color: 'bg-surface-100 text-surface-700' },
   ];
 
-  readonly createExample = `# Via slash command (in your AI agent)
-/prodara:propose "Add payment processing to billing module"
+  readonly createExample = `# Via AI prompt (in your AI agent)
+/prodara Create a proposal to add payment processing to billing module
 
 # Via CLI
 prodara propose "Add payment processing to billing module"`;
