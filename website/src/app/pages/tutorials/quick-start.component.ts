@@ -145,9 +145,9 @@ export class QuickStartComponent {
     { num: 3, anchor: 'iterate', label: 'Iterate' },
   ];
 
-  readonly buildPrompt = `@prodara Build me a ToDo application with tasks,
+  readonly buildPrompt = `/Prodara Build me a ToDo application with tasks,
 due dates, and priority levels.`;
 
-  readonly iteratePrompt = `@prodara Add a "completed" filter and a
+  readonly iteratePrompt = `/Prodara Add a "completed" filter and a
 workflow to archive old tasks.`;
 }

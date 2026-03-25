@@ -87,7 +87,7 @@ export class ProposalsComponent {
   ];
 
   readonly createExample = `# Via AI prompt (in your AI agent)
-/prodara Create a proposal to add payment processing to billing module
+/Prodara Create a proposal to add payment processing to billing module
 
 # Via CLI
 prodara propose "Add payment processing to billing module"`;

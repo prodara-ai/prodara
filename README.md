@@ -22,7 +22,7 @@ Under the hood, Prodara uses a structured specification language (`.prd` files) 
 **One command does it all**:
 
 ```
-prodara init → /prodara "Build a SaaS billing system" → production-ready code
+prodara init → /Prodara "Build a SaaS billing system" → production-ready code
 ```
 
 ## Quick Start
@@ -35,11 +35,11 @@ npm install -g @prodara/cli
 prodara init my-product
 cd my-product
 
-# Open in VS Code and use the /prodara command:
+# Open in VS Code and use the /Prodara command:
 code .
 
 # In your AI agent's chat, type:
-#   /prodara Build a task management app with teams, projects, and real-time updates
+#   /Prodara Build a task management app with teams, projects, and real-time updates
 
 # Or run the build pipeline directly:
 prodara build
@@ -54,7 +54,7 @@ You describe what you want
         │
         ▼
 ┌──────────────────┐
-│  /prodara command │  Your AI agent (Copilot, Claude, Cursor, etc.)
+│  /Prodara command │  Your AI agent (Copilot, Claude, Cursor, etc.)
 └──────────────────┘
         │
         ▼
@@ -98,7 +98,7 @@ The AI agent executes all 8 phases autonomously. It only pauses to ask clarifica
 ## Features
 
 ### End-to-End AI Orchestration
-- **Single command** — `/prodara <description>` drives the entire lifecycle
+- **Single command** — `/Prodara <description>` drives the entire lifecycle
 - **8-phase workflow** — Clarify → Specify → Validate → Build → Govern → Implement → Review → Deliver
 - **26 supported AI platforms** — Copilot, Claude, Cursor, Gemini, Windsurf, Codex, Kiro, Jules, Amp, Roo, Aider, Cline, Continue, Zed, Bolt, Aide, Trae, Augment, Sourcegraph, TabNine, Supermaven, Void, PearAI, Double, OpenCode, and a generic adapter
 - **Autonomous execution** — Only pauses for genuinely ambiguous clarifications
@@ -286,7 +286,7 @@ prodara init my-product --ai gemini     # Google Gemini
 Once initialized, open the project in your IDE and use the `/prodara` command:
 
 ```
-/prodara Build a task management app with teams, projects, and Kanban boards
+/Prodara Build a task management app with teams, projects, and Kanban boards
 ```
 
 The AI agent handles everything:

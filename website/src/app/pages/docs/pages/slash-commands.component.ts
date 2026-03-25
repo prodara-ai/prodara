@@ -112,9 +112,9 @@ export class SlashCommandsComponent {
   ];
 
   readonly examples = [
-    '/prodara Build me a SaaS billing system with Stripe integration',
-    '/prodara Add a dashboard surface to the analytics module',
-    '/prodara Review the security governance for the payments module',
+    '/Prodara Build me a SaaS billing system with Stripe integration',
+    '/Prodara Add a dashboard surface to the analytics module',
+    '/Prodara Review the security governance for the payments module',
   ];
 
   readonly platforms = [

@@ -418,7 +418,7 @@ module todo {
     { title: 'Syntax Highlighting', desc: 'Rich semantic coloring for .prd files - keywords, types, identifiers, and string literals with a dedicated TextMate grammar.' },
     { title: 'Real-Time Diagnostics', desc: 'See compiler errors and warnings inline as you type, powered by the Prodara Language Server with 300ms debounced validation.' },
     { title: 'Smart Completions', desc: 'Context-aware autocomplete for all PRD keywords, type names, and cross-module references - triggered on "." and ":" characters.' },
-    { title: 'Agent-Driven Building', desc: 'Type @prodara followed by what you want. Your agent writes specs, compiles, and implements — all without leaving the editor.' },
+    { title: 'Agent-Driven Building', desc: 'Type /Prodara followed by what you want. Your agent writes specs, compiles, and implements — all without leaving the editor.' },
     { title: 'Built-In Agent Knowledge', desc: 'prodara init configures your agent automatically. No workflow instructions needed — the agent already knows how Prodara works.' },
   ];
 
@@ -433,25 +433,25 @@ module todo {
       num: '2',
       title: 'Let Your Agent Build',
       desc: 'Open the project in your IDE and tell your agent what to build. It handles everything — specs, compilation, and code generation. No commands to memorize.',
-      cmd: '@prodara Build me a ToDo app with priorities',
+      cmd: '/Prodara Build me a ToDo app with priorities',
     },
     {
       num: '3',
       title: 'Iterate & Ship',
       desc: 'Change the spec, ask your agent to rebuild, and see exactly what changed with semantic diffing. 9 built-in reviewers catch issues before they reach code.',
-      cmd: '@prodara Add priorities to the task board',
+      cmd: '/Prodara Add priorities to the task board',
     },
   ];
 
   readonly newUserReasons = [
-    { title: 'Your agent does the building', desc: 'Run prodara init, open in your IDE, and use the /prodara prompt. Your AI agent handles everything — you just describe the product.' },
+    { title: 'Your agent does the building', desc: 'Run prodara init, open in your IDE, and use the /Prodara prompt. Your AI agent handles everything — you just describe the product.' },
     { title: 'Real compiler, real errors', desc: 'Not a linter on top of markdown - a full lexer/parser/binder/type-checker that catches mistakes before they reach code. 900+ stable error codes.' },
     { title: 'VS Code extension included', desc: 'Install the extension and get syntax highlighting, inline diagnostics, completions, go-to-definition, and hover info from day one.' },
     { title: 'Spec-native testing', desc: 'Write expect blocks right inside your spec. Test transitions, authorization, validation rules, and return types - directly against the Product Graph.' },
   ];
 
   readonly agentUserReasons = [
-    { title: 'Agent-ready out of the box', desc: 'prodara init configures your AI agent automatically. Just type @prodara and describe what you want — no workflow instructions needed.' },
+    { title: 'Agent-ready out of the box', desc: 'prodara init configures your AI agent automatically. Just type /Prodara and describe what you want — no workflow instructions needed.' },
     { title: 'Compiler-validated specs', desc: 'A full 13-phase compiler catches mistakes before they reach generated code. Suggested fixes let agents self-correct in a loop.' },
     { title: 'Semantic diffing & impact analysis', desc: 'When you change a spec, Prodara traces 40+ edge types to tell you exactly which downstream artifacts need updating - with depth tracking.' },
     { title: 'Governance as code', desc: 'Constitutions enforce security, privacy, and compliance policies. 9 built-in reviewers plus custom reviewers catch issues automatically.' },

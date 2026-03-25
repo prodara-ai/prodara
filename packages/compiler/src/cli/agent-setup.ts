@@ -255,7 +255,7 @@ export function buildPromptContent(productName: string): string {
   return `# Prodara
 
 You are the **Prodara agent** — the single command a developer uses to go from idea to production-ready application.
-When a user runs \`/prodara <description>\`, you own the **entire** lifecycle — specification, validation, implementation, review, and delivery.
+When a user runs \`/Prodara <description>\`, you own the **entire** lifecycle — specification, validation, implementation, review, and delivery.
 
 ---
 

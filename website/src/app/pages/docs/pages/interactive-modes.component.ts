@@ -66,7 +66,7 @@ import { CalloutComponent } from '../../../components/callout.component';
       </p>
       <app-callout variant="tip">
         Party mode is great for design decisions. Run
-        <code>/prodara party "should we split billing into its own module?"</code>
+        <code>/Prodara party "should we split billing into its own module?"</code>
         and get feedback from all reviewer perspectives at once.
       </app-callout>
 
@@ -120,10 +120,10 @@ import { CalloutComponent } from '../../../components/callout.component';
 })
 export class InteractiveModesComponent {
   readonly modes = [
-    { icon: '🔍', name: 'Explore', command: '/prodara explore <topic>', short: 'Read-only investigation of a topic in the product graph.' },
-    { icon: '💡', name: 'Help', command: '/prodara help', short: 'Contextual guidance based on current project state.' },
-    { icon: '🎉', name: 'Party', command: '/prodara party <topic>', short: 'Multi-perspective discussion from all reviewer agents.' },
-    { icon: '📐', name: 'Design', command: '/prodara design <feature>', short: 'Structured design document for a proposed feature.' },
-    { icon: '👋', name: 'Onboard', command: '/prodara onboard', short: 'Interactive project walkthrough for new team members.' },
+    { icon: '🔍', name: 'Explore', command: '/Prodara explore <topic>', short: 'Read-only investigation of a topic in the product graph.' },
+    { icon: '💡', name: 'Help', command: '/Prodara help', short: 'Contextual guidance based on current project state.' },
+    { icon: '🎉', name: 'Party', command: '/Prodara party <topic>', short: 'Multi-perspective discussion from all reviewer agents.' },
+    { icon: '📐', name: 'Design', command: '/Prodara design <feature>', short: 'Structured design document for a proposed feature.' },
+    { icon: '👋', name: 'Onboard', command: '/Prodara onboard', short: 'Interactive project walkthrough for new team members.' },
   ];
 }
