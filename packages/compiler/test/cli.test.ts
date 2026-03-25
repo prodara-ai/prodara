@@ -715,6 +715,23 @@ describe('init command', () => {
       rmSync(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it('exits 1 when spec/app.prd already exists', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, writeFileSync: fsWrite, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, 'spec'), { recursive: true });
+      fsWrite(join(tmpDir, 'spec', 'app.prd'), 'product test {}', 'utf-8');
+      const program = createProgram();
+      await runCommand(program, ['init', tmpDir]);
+      expect(stderrOutput).toContain('Already initialized');
+      expect(stderrOutput).toContain('spec');
+      expect(process.exitCode).toBe(1);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -919,6 +936,25 @@ describe('upgrade command', () => {
       expect(mockGenerateSlashCommands).toHaveBeenCalledWith('claude', expect.any(String), 'my_app', undefined);
       expect(mockWriteSlashCommands).toHaveBeenCalled();
       expect(stdoutOutput).toContain('Regenerated prompt file for claude');
+      expect(process.exitCode).toBe(0);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('reads product name from spec/app.prd during agent regeneration', async () => {
+    const { mkdtempSync, mkdirSync: fsMkdir, writeFileSync: fsWrite, rmSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsMkdir(join(tmpDir, '.prodara'), { recursive: true });
+      fsMkdir(join(tmpDir, 'spec'), { recursive: true });
+      fsWrite(join(tmpDir, 'spec', 'app.prd'), 'product billing_app {\n  title: "Billing"\n}', 'utf-8');
+      mockDetectAgent.mockReturnValue('copilot');
+      mockGenerateSlashCommands.mockReturnValue([]);
+      const program = createProgram();
+      await runCommand(program, ['upgrade', tmpDir, '--skip-install']);
+      expect(mockGenerateSlashCommands).toHaveBeenCalledWith('copilot', expect.any(String), 'billing_app', undefined);
       expect(process.exitCode).toBe(0);
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
