@@ -41,7 +41,7 @@ if [[ -f "$HOMEPAGE" ]]; then
   sed -i '' "s/v[0-9]\{1,\}\.[0-9]\{1,\}\(\.[0-9]\{1,\}\)\{0,1\} - First Public Release/$VERSION/" "$HOMEPAGE"
 fi
 
-git add "${PACKAGES[@]/%//package.json}" package.json "$HOMEPAGE"
+git add "${PACKAGES[@]/%//package.json}" package.json package-lock.json "$HOMEPAGE"
 git commit -m "Release version $VERSION"
 git tag "$VERSION"
 
