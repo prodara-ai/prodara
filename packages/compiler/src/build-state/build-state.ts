@@ -34,11 +34,16 @@ export interface LockInfo {
 
 /**
  * Ensure the .prodara/ directory exists.
+ * Creates a .gitignore to exclude transient files (runs/, temp files).
  */
 export function ensureBuildDir(root: string): string {
   const dir = join(root, BUILD_DIR);
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
+  }
+  const gitignorePath = join(dir, '.gitignore');
+  if (!existsSync(gitignorePath)) {
+    writeFileSync(gitignorePath, 'runs/\n*.tmp\n', 'utf-8');
   }
   return dir;
 }

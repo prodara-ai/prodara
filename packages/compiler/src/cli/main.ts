@@ -1597,7 +1597,9 @@ return program;
 // Entry point — only runs when executed directly
 /* v8 ignore next 3 */
 if (process.argv[1] && resolve(process.argv[1]).includes('main')) {
-  createProgram().parse();
+  createProgram().parseAsync().catch(() => {
+    process.exitCode = process.exitCode || 1;
+  });
 }
 
 // -----------------------------------------------------------------------

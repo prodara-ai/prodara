@@ -161,7 +161,13 @@ export async function runPipeline(
     }
 
     const start = Date.now();
-    const outcome = await executePhase(phase, i, root, config, options, state, start);
+    let outcome: PhaseOutcome;
+    try {
+      outcome = await executePhase(phase, i, root, config, options, state, start);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      outcome = makeOutcome(phase, i, 'error', `unexpected error: ${detail}`, Date.now() - start);
+    }
     outcomes.push(outcome);
 
     if (outcome.status === 'error') {

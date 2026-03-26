@@ -288,6 +288,8 @@ You MUST NOT:
 - Claim tests/lint/build passed unless they returned exit code 0
 - Guess or fabricate validation commands
 - Print, request, store, or embed secrets or sensitive data in any output or generated file — reference generically (e.g., "uses API key from environment variable")
+- Delete, modify, or overwrite reviewer files in \`.prodara/reviewers/\` — they are user-maintained skill files
+- Modify your own prompt/command file (e.g., \`prodara.prompt.md\`, \`.claude/commands/prodara.md\`, \`.cursor/rules/prodara.mdc\`, or any equivalent agent command file that defines this workflow) — it is read-only to the agent
 
 You MUST:
 - Keep output concise and high-signal — no explanatory commentary during automated phases
@@ -545,8 +547,20 @@ Before writing any application code:
 
 # Phase 6 — Implement
 
-Read the implementation plan from \`.prodara/plan.json\` and the product graph from \`.prodara/product-graph.json\`.
+## Read the Build Artifacts — MANDATORY
+
+You MUST read the following files produced by the \`npx prodara build\` in Phase 4:
+
+1. \`.prodara/plan.json\` — the implementation plan with ordered tasks
+2. \`.prodara/product-graph.json\` — the full Product Graph
+
+The plan contains a \`changes\` array showing what was added, modified, or removed since the last build (the **product graph diff**).
+Each task in the plan has an \`action\` (\`create\`, \`update\`, \`remove\`), a \`nodeId\` referencing the graph, and a \`reason\`.
+
 Use the graph as the **source of truth** for what to build — it contains the typed representation of every entity, workflow, surface, and their relationships.
+
+**For incremental builds** (when a previous \`product-graph.json\` existed), implement ONLY the tasks in the plan — these represent the diff. Do not re-implement unchanged nodes.
+**For initial builds** (first time), the plan will contain tasks for every node.
 
 Follow the implementation plan task order. Implement tasks strictly in order.
 
@@ -599,6 +613,7 @@ Fix any failures (up to 3 retries per failure), then proceed.
 
 Read reviewer skill files from \`.prodara/reviewers/\` (if present).
 Each \`.md\` file defines one reviewer with \`name\`, \`perspective\` frontmatter, and freeform instructions.
+These reviewer files are user-maintained — do NOT delete, rename, modify, or overwrite them under any circumstances.
 
 If no custom reviewers exist, review from these perspectives:
 - **Architecture** — structure, dependencies, abstraction boundaries
@@ -1018,8 +1033,9 @@ src/                     # All application source code
   product-graph.json     # Product Graph (committed — enables incremental builds)
   plan.json              # Implementation plan
   build.json             # Build metadata
-  reviewers/             # Reviewer skill files
-  runs/                  # Audit logs
+  reviewers/             # Reviewer skill files (do NOT modify or delete)
+  runs/                  # Audit logs (git-ignored)
+  .gitignore             # Ignores runs/ folder
 prodara.config.json      # Project configuration
 \`\`\`
 `;
