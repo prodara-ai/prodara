@@ -1,6 +1,6 @@
 {
   "name": "@prodara/lsp",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "description": "Language Server Protocol implementation for Prodara .prd files",
   "author": "Prodara Contributors",
   "repository": {
