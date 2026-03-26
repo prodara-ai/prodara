@@ -411,6 +411,30 @@ describe('runPipeline', () => {
     expect(auditPhase?.status).toBe('ok');
   });
 
+  it('catches unexpected exceptions from a phase and reports error', async () => {
+    mockCompile.mockImplementation(() => { throw new Error('parser exploded'); });
+    const result = await runPipeline('/tmp/project', config);
+    expect(result.status).toBe('failed');
+
+    const compilePhase = result.phases.find((p) => p.phase === 'compile');
+    expect(compilePhase?.status).toBe('error');
+    expect(compilePhase?.detail).toContain('unexpected error: parser exploded');
+
+    // Downstream phases are skipped (except audit)
+    const graphPhase = result.phases.find((p) => p.phase === 'graph');
+    expect(graphPhase?.status).toBe('skipped');
+  });
+
+  it('catches non-Error exceptions from a phase', async () => {
+    mockCompile.mockImplementation(() => { throw 'string crash'; });
+    const result = await runPipeline('/tmp/project', config);
+    expect(result.status).toBe('failed');
+
+    const compilePhase = result.phases.find((p) => p.phase === 'compile');
+    expect(compilePhase?.status).toBe('error');
+    expect(compilePhase?.detail).toContain('unexpected error: string crash');
+  });
+
   it('reports compile warnings', async () => {
     mockCompile.mockReturnValue(makeCompileResult({ warnings: true }));
     const result = await runPipeline('/tmp/project', config);

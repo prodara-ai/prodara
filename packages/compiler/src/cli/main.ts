@@ -407,6 +407,17 @@ program
     mkdirSync(join(prodaraDir, 'runs'), { recursive: true });
     mkdirSync(join(prodaraDir, 'reviewers'), { recursive: true });
 
+    // Ensure root .gitignore includes node_modules
+    const gitignorePath = join(root, '.gitignore');
+    if (existsSync(gitignorePath)) {
+      const existing = readFileSync(gitignorePath, 'utf-8');
+      if (!existing.split('\n').some(line => line.trim() === 'node_modules')) {
+        writeFileSync(gitignorePath, existing.trimEnd() + '\nnode_modules\n', 'utf-8');
+      }
+    } else {
+      writeFileSync(gitignorePath, 'node_modules\n', 'utf-8');
+    }
+
     // Scaffold all built-in reviewer skill files
     for (const [name, content] of REVIEWER_TEMPLATES) {
       writeFileSync(join(prodaraDir, 'reviewers', `${name}.md`), content, 'utf-8');
@@ -1595,7 +1606,7 @@ return program;
 }
 
 // Entry point — only runs when executed directly
-/* v8 ignore next 3 */
+/* v8 ignore next 5 */
 if (process.argv[1] && resolve(process.argv[1]).includes('main')) {
   createProgram().parseAsync().catch(() => {
     process.exitCode = process.exitCode || 1;

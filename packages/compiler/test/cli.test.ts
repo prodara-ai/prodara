@@ -770,6 +770,55 @@ describe('init command', () => {
       rmSync(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it('creates .gitignore with node_modules when none exists', async () => {
+    const { mkdtempSync, rmSync, readFileSync: fsRead } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      const program = createProgram();
+      await runCommand(program, ['init', tmpDir, '--name', 'test_app', '--skip-install']);
+      const gitignore = fsRead(join(tmpDir, '.gitignore'), 'utf-8');
+      expect(gitignore).toContain('node_modules');
+      expect(process.exitCode).toBe(0);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('appends node_modules to existing .gitignore that lacks it', async () => {
+    const { mkdtempSync, writeFileSync: fsWrite, rmSync, readFileSync: fsRead } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsWrite(join(tmpDir, '.gitignore'), 'dist/\n.env\n', 'utf-8');
+      const program = createProgram();
+      await runCommand(program, ['init', tmpDir, '--name', 'test_app', '--skip-install']);
+      const gitignore = fsRead(join(tmpDir, '.gitignore'), 'utf-8');
+      expect(gitignore).toContain('node_modules');
+      expect(gitignore).toContain('dist/');
+      expect(process.exitCode).toBe(0);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not duplicate node_modules in existing .gitignore', async () => {
+    const { mkdtempSync, writeFileSync: fsWrite, rmSync, readFileSync: fsRead } = await import('node:fs');
+    const { join } = await import('node:path');
+    const tmpDir = mkdtempSync(join((await import('node:os')).tmpdir(), 'prodara-cli-test-'));
+    try {
+      fsWrite(join(tmpDir, '.gitignore'), 'node_modules\ndist/\n', 'utf-8');
+      const program = createProgram();
+      await runCommand(program, ['init', tmpDir, '--name', 'test_app', '--skip-install']);
+      const gitignore = fsRead(join(tmpDir, '.gitignore'), 'utf-8');
+      const count = gitignore.split('\n').filter((l: string) => l.trim() === 'node_modules').length;
+      expect(count).toBe(1);
+      expect(process.exitCode).toBe(0);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

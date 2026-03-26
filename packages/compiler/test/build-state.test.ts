@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, readFileSync, existsSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, existsSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { ensureBuildDir, readPreviousGraph, writeBuildState, acquireLock, releaseLock, cleanupTempFiles } from '../src/build-state/build-state.js';
@@ -144,6 +144,26 @@ describe('Build State', () => {
       expect(existsSync(join(dir, 'product-graph.json.tmp'))).toBe(false);
       expect(existsSync(join(dir, 'plan.json.tmp'))).toBe(false);
       expect(existsSync(join(dir, 'build.json.tmp'))).toBe(false);
+    });
+
+    it('cleans up temp files and re-throws when rename fails', () => {
+      const dir = ensureBuildDir(tempDir);
+      // Block plan.json with a non-empty directory so renameSync fails with
+      // EISDIR on the second rename.  The first rename (product-graph.json)
+      // succeeds, consuming its temp file.  When the catch block later tries
+      // unlinkSync on the already-renamed graphTmp, that inner catch branch
+      // is exercised as well.
+      const blocker = join(dir, 'plan.json');
+      mkdirSync(blocker);
+      writeFileSync(join(blocker, 'x'), 'x');
+
+      expect(() => writeBuildState(tempDir, makeGraph(), makePlan(), ['a.prd'])).toThrow();
+      // graphTmp was already renamed, so .tmp is gone
+      expect(existsSync(join(dir, 'product-graph.json.tmp'))).toBe(false);
+      // remaining temp files cleaned up by catch block
+      expect(existsSync(join(dir, 'plan.json.tmp'))).toBe(false);
+      expect(existsSync(join(dir, 'build.json.tmp'))).toBe(false);
+      expect(existsSync(join(dir, 'sources.json.tmp'))).toBe(false);
     });
   });
 
