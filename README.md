@@ -1,5 +1,9 @@
 <p align="center">
-  <a href="https://www.prodara.net" target="blank"><img src="assets/logo/logo-vertical.png" width="320" alt="Prodara Logo" /></a>
+  <a href="https://www.prodara.net" target="blank"><img src="assets/logo/icon.png" width="320" alt="Prodara Logo" /></a>
+</p>
+
+<p align="center">
+<h1 style="text-align: center">Prodara</h1>
 </p>
 
 <p align="center">Give your AI a compiler, not a pile of markdown.<br/>Prodara compiles <code>.prd</code> specs into a typed Product Graph. Change a spec and the compiler tells your agent exactly what's impacted.</p>
