@@ -22,7 +22,7 @@ import { RouterLink } from '@angular/router';
           </div>
           <h2 class="text-xl font-semibold text-surface-950 group-hover:text-primary-600">Quick Start</h2>
           <p class="mt-2 text-sm text-surface-600">
-            Run <code>prodara init</code>, open your IDE, and type <code>&#64;prodara</code> followed by what you want to build.
+            Run <code>prodara init</code>, open your IDE, and type <code>/Prodara</code> followed by what you want to build.
             Three steps — that's it.
           </p>
           <div class="mt-4 flex items-center gap-2 text-sm font-medium text-primary-600">

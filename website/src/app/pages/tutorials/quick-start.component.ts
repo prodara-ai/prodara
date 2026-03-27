@@ -66,7 +66,7 @@ import { CalloutComponent } from '../../components/callout.component';
           No need to learn any commands or syntax. The agent already knows how Prodara works.
         </p>
         <app-callout variant="info">
-          <code>prodara init</code> generates an <code>&#64;prodara</code> prompt and
+          <code>prodara init</code> generates a <code>/Prodara</code> prompt and
           copilot-instructions automatically. Your agent is ready to build from the moment you open the project.
         </app-callout>
       </section>
